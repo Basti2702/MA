@@ -16,6 +16,9 @@ public:
 	virtual ~DataReader();
 
 	int getLaserData(laserdata_raw_array data);
+	int processLaserData(laserdata_raw data[], int numElements);
+	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
+	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
 };
 
 #endif /* DATAREADER_H_ */
