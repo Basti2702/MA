@@ -9,6 +9,7 @@
 #define DATAREADER_H_
 
 #include "data.h"
+#include "DataVisualizer.h"
 
 class DataReader {
 public:
@@ -18,6 +19,7 @@ public:
 	int processLaserData();
 
 private:
+	DataVisualizer visualizer;
 	int getLaserData(laserdata_raw_array data);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);

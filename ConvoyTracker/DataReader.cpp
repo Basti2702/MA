@@ -130,7 +130,7 @@ int DataReader::processLaserData()
 	currentSegment.measures.push_back(oldMeasure);
 
 	//iterate over all measures
-	for(int i=0; i<numElements; ++i)
+	for(int i=1; i<numElements; i++)
 	{
 		currentMeasure = data[i];
 		if(computeEuclideanDistance(oldMeasure, currentMeasure) <= computeThreshold(oldMeasure, currentMeasure))
@@ -147,15 +147,23 @@ int DataReader::processLaserData()
 			{
 				segments.push_back(currentSegment);
 			}
-			currentSegment.numberOfMeasures = 0;
+			std::cout << "Started new Segment oldMeasure.angle: " << oldMeasure.angle << " oldMeasure.distance: " << oldMeasure.distance << " currentMeasure.angle: " << currentMeasure.angle << " currentMeasure.distance: " << currentMeasure.distance << " Euclidean Distance: " << computeEuclideanDistance(oldMeasure, currentMeasure) << " Threshold: " << computeThreshold(oldMeasure, currentMeasure) << std::endl;
+			currentSegment.numberOfMeasures = 1;
 			currentSegment.measures.clear();
+			currentSegment.measures.push_back(currentMeasure);
 		}
 		oldMeasure = currentMeasure;
+	}
+
+	if(currentSegment.numberOfMeasures >= 3)
+	{
+		segments.push_back(currentSegment);
 	}
 
 	std::cout << "Extracted " << segments.size() << "Objects from Laserdata" << std::endl;
 
 	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
+	visualizer.visualizeSegmentsAsPointCloud(transformedData);
 	std::vector<PC> vehicles = computeVehicleState(transformedData);
 	return 0;
 }
@@ -169,22 +177,27 @@ double DataReader::computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2)
 	double square1 = p1.distance*p1.distance;
 	double square2 = p2.distance*p2.distance;
 	double deltaAlpha = p2.angle-p1.angle;
+	deltaAlpha = (deltaAlpha * M_PI / 180.0);
 	return sqrt(square1+square2-2*p1.distance*p2.distance*cos(deltaAlpha));
 }
 
 double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 {
 	//https://www.researchgate.net/publication/243773062_Model_Based_Object_Classification_and_Tracking_in_Traffic_Scenes_from_Range_Images
-	double C0 = 0.5;
-	double C1;
+	double C0 = 1.0;
+	double C1, C2;
 	double min_distance = p2.distance;
+
+	double deltaAlpha = p2.angle-p1.angle;
+	deltaAlpha = (deltaAlpha * M_PI / 180.0);
 
 	if(p1.distance < p2.distance)
 	{
 		min_distance = p1.distance;
 	}
 
-	C1 = this->computeEuclideanDistance(p1,p2)/p1.distance;
+//	C2= this->computeEuclideanDistance(p1,p2)/p1.distance;
+	C1 = sqrt(2*(1-cos(deltaAlpha)));
 
 	return C0 + C1*min_distance;
 
@@ -195,15 +208,26 @@ std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw
 {
 	std::vector<cartesian_segment> transformedData;
 
-	for(raw_segment seg : segments)
+	for(uint i = 0; i<segments.size(); i++)
 	{
+		raw_segment seg = segments.at(i);
 		cartesian_segment curSeg;
 		curSeg.numberOfMeasures = seg.numberOfMeasures;
-		for(laserdata_raw raw : seg.measures)
+
+		double angleInRadians;
+
+		for(int j=0; j<seg.numberOfMeasures; j++)
 		{
+			laserdata_raw raw = seg.measures.at(j);
 			laserdata_cartesian currentLaser;
-			currentLaser.x = raw.distance*cos(raw.angle);
-			currentLaser.y = raw.distance*sin(raw.angle);
+
+			angleInRadians = raw.angle * M_PI / 180.0;
+
+			currentLaser.x = raw.distance*cos(angleInRadians);
+			currentLaser.y = raw.distance*sin(angleInRadians);
+
+
+
 			curSeg.measures.push_back(currentLaser);
 		}
 		transformedData.push_back(curSeg);
