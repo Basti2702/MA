@@ -33,7 +33,7 @@ DataReader::~DataReader() {
  */
 int DataReader::getLaserData(laserdata_raw_array data)
 {
-    std::ifstream input("/home/basti/MA/ConvoyTracker/Laserdata/laser1Messung.txt");
+    std::ifstream input("/home/basti/MA/ConvoyTracker/Laserdata/LaserMessung0031.txt");
     std::string line;
     int counter = 0;
 	std::string segment;
@@ -57,7 +57,8 @@ int DataReader::getLaserData(laserdata_raw_array data)
 
     //now read the data we are interested in
     counter = 0;
-    while( std::getline( input, line ) && counter < NUMBER_LASERRAYS ) {
+    int lineCounter = 0;
+    while( std::getline( input, line ) && lineCounter < NUMBER_LASERRAYS ) {
     	//std::cout<<line<<'\n';
     	std::stringstream ss;
 
@@ -65,6 +66,7 @@ int DataReader::getLaserData(laserdata_raw_array data)
 
     	int datacnt = 1;
     	//extract relevant data from line
+    	int valid = 0;
     	while(std::getline(ss, segment, ' '))
     	{
     		if(segment.size() > 0)
@@ -77,35 +79,51 @@ int DataReader::getLaserData(laserdata_raw_array data)
     			{
     				if(datacnt == 5)
     				{
-    					data[counter].valid = atoi(segment.c_str());
+    					valid = atoi(segment.c_str());
+    					if(valid == 1)
+    					{
+    						data[counter].valid = valid;
+    					}
     				}
-    				else if(datacnt == 6)
+    				else if(datacnt == 6 && valid == 1)
     				{
     					data[counter].distance = atof(segment.c_str());
+    			    	break;
     				}
     		//		std::cout<<segment << ' ';
             		++datacnt;
     			}
     		}
     	}
-    	data[counter].angle = angle;
-    	std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
+    	if(valid)
+    	{
+    		data[counter].angle = angle;
+    		std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
+	    	++counter;
+    	}
     	angle += 0.25;
-    	++counter;
+    	++lineCounter;
     }
-    //assert(angle == 72.5);
-    return 0;
+    std::cout << counter << std::endl;
+    return counter;
 }
 /**
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-int DataReader::processLaserData(laserdata_raw data[], int numElements)
+int DataReader::processLaserData()
 {
+	laserdata_raw data[NUMBER_LASERRAYS];
 	laserdata_raw currentMeasure;
-	laserdata_raw oldMeasure = data[0];
+	laserdata_raw oldMeasure;
 	std::vector<raw_segment> segments;
 	raw_segment currentSegment;
+
+	//read new data from file
+	int numElements = getLaserData(data);
+
+	oldMeasure = data[0];
+
 
 	//first point automatically is part of the first segment;
 	currentSegment.numberOfMeasures = 1;
@@ -135,6 +153,10 @@ int DataReader::processLaserData(laserdata_raw data[], int numElements)
 		oldMeasure = currentMeasure;
 	}
 
+	std::cout << "Extracted " << segments.size() << "Objects from Laserdata" << std::endl;
+
+	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
+	std::vector<PC> vehicles = computeVehicleState(transformedData);
 	return 0;
 }
 
@@ -167,5 +189,35 @@ double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 	return C0 + C1*min_distance;
 
 //	double beta = 0.5;
+}
 
+std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw_segment> segments)
+{
+	std::vector<cartesian_segment> transformedData;
+
+	for(raw_segment seg : segments)
+	{
+		cartesian_segment curSeg;
+		curSeg.numberOfMeasures = seg.numberOfMeasures;
+		for(laserdata_raw raw : seg.measures)
+		{
+			laserdata_cartesian currentLaser;
+			currentLaser.x = raw.distance*cos(raw.angle);
+			currentLaser.y = raw.distance*sin(raw.angle);
+			curSeg.measures.push_back(currentLaser);
+		}
+		transformedData.push_back(curSeg);
+	}
+	return transformedData;
+}
+
+std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> segments)
+{
+	std::vector<PC> vehicles;
+	for(uint i=0; i<segments.size(); i++)
+	{
+		cartesian_segment currentSeg = segments.at(i);
+
+
+	}
 }

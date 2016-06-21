@@ -15,10 +15,14 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
+	int processLaserData();
+
+private:
 	int getLaserData(laserdata_raw_array data);
-	int processLaserData(laserdata_raw data[], int numElements);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
+	std::vector<PC> computeVehicleState(std::vector<cartesian_segment> segments);
+	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
 };
 
 #endif /* DATAREADER_H_ */

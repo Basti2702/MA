@@ -23,8 +23,7 @@ int main()
 	DataReader reader;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
-		laserdata_raw_array data;
-		reader.getLaserData(data);
+		reader.processLaserData();
 	}
 	return 0;
 }
