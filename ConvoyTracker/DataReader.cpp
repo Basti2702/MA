@@ -6,13 +6,7 @@
  */
 
 #include "DataReader.h"
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <assert.h>
-#include <stdlib.h>
-#include <math.h>
+
 
 DataReader::DataReader() {
 	// TODO Auto-generated constructor stub
@@ -31,9 +25,12 @@ DataReader::~DataReader() {
  * 	1 if an error occurs
  * 	0 if everything is ok
  */
-int DataReader::getLaserData(laserdata_raw_array data)
+int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 {
-    std::ifstream input("/home/basti/MA/ConvoyTracker/Laserdata/LaserMessung0031.txt");
+	std::ostringstream measurePath;
+	measurePath << MEASUREPATH << number << ".txt";
+	std::cout << measurePath.str() << std::endl;
+    std::ifstream input(measurePath.str().c_str());
     std::string line;
     int counter = 0;
 	std::string segment;
@@ -98,7 +95,7 @@ int DataReader::getLaserData(laserdata_raw_array data)
     	if(valid)
     	{
     		data[counter].angle = angle;
-    		std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
+    //		std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
 	    	++counter;
     	}
     	angle += 0.25;
@@ -111,7 +108,7 @@ int DataReader::getLaserData(laserdata_raw_array data)
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-int DataReader::processLaserData()
+int DataReader::processLaserData(std::string number)
 {
 	laserdata_raw data[NUMBER_LASERRAYS];
 	laserdata_raw currentMeasure;
@@ -120,7 +117,7 @@ int DataReader::processLaserData()
 	raw_segment currentSegment;
 
 	//read new data from file
-	int numElements = getLaserData(data);
+	int numElements = getLaserData(data, number);
 
 	oldMeasure = data[0];
 
@@ -147,7 +144,7 @@ int DataReader::processLaserData()
 			{
 				segments.push_back(currentSegment);
 			}
-			std::cout << "Started new Segment oldMeasure.angle: " << oldMeasure.angle << " oldMeasure.distance: " << oldMeasure.distance << " currentMeasure.angle: " << currentMeasure.angle << " currentMeasure.distance: " << currentMeasure.distance << " Euclidean Distance: " << computeEuclideanDistance(oldMeasure, currentMeasure) << " Threshold: " << computeThreshold(oldMeasure, currentMeasure) << std::endl;
+		//	std::cout << "Started new Segment oldMeasure.angle: " << oldMeasure.angle << " oldMeasure.distance: " << oldMeasure.distance << " currentMeasure.angle: " << currentMeasure.angle << " currentMeasure.distance: " << currentMeasure.distance << " Euclidean Distance: " << computeEuclideanDistance(oldMeasure, currentMeasure) << " Threshold: " << computeThreshold(oldMeasure, currentMeasure) << std::endl;
 			currentSegment.numberOfMeasures = 1;
 			currentSegment.measures.clear();
 			currentSegment.measures.push_back(currentMeasure);
@@ -163,8 +160,8 @@ int DataReader::processLaserData()
 	std::cout << "Extracted " << segments.size() << "Objects from Laserdata" << std::endl;
 
 	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
-	visualizer.visualizeSegmentsAsPointCloud(transformedData);
-	std::vector<PC> vehicles = computeVehicleState(transformedData);
+	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
+	//std::vector<PC> vehicles = computeVehicleState(transformedData);
 	return 0;
 }
 

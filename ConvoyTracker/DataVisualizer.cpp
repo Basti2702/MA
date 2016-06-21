@@ -19,6 +19,16 @@ DataVisualizer::DataVisualizer() {
 	colors[7] = "#ff0080";
 	colors[8] = "#808080";
 	colors[9] = "#000000";
+	colors[10] = "#ffc1ce";
+	colors[11] = "#8b0000";
+	colors[12] = "#cccccc";
+	colors[13] = "#bb4444";
+	colors[14] = "#6e4474";
+	colors[15] = "#00819c";
+	colors[16] = "#bab206";
+	colors[17] = "#af55ba";
+	colors[18] = "#ff6666";
+	colors[19] = "#ff15ab";
 }
 
 DataVisualizer::~DataVisualizer() {
@@ -27,10 +37,12 @@ DataVisualizer::~DataVisualizer() {
 /*
  * Creates an SVG File (http://www.w3schools.com/svg/svg_inhtml.asp) to visualize the segments as pointcloud
  */
-void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments)
+void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number)
 {
 	  std::ofstream myfile;
-	  myfile.open ("./PointCloud.html");
+	  std::ostringstream filename;
+	  filename << "./Visualization/PointCloud" << number << ".html";
+	  myfile.open (filename.str().c_str());
 	  myfile << "<!DOCTYPE html>" << std::endl;
 	  myfile << "<html>" << std::endl;
 	  myfile << "<body>" << std::endl;

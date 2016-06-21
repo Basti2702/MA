@@ -8,7 +8,10 @@
 #ifndef CONVOYTRACKER_H_
 #define CONVOYTRACKER_H_
 
-#define NUM_MEASUREMENT 1
+#include <string>
+#include <iostream>
+
+#define NUM_MEASUREMENT 1242
 
 class ConvoyTracker {
 public:

@@ -18,12 +18,36 @@ ConvoyTracker::~ConvoyTracker() {
 	// TODO Auto-generated destructor stub
 }
 
+
+std::string getNextMeasureAsString(int i)
+{
+	std::ostringstream number;
+	if(i<10)
+	{
+		number << "000" << i;
+	}
+	else if(i<100)
+	{
+		number << "00" << i;
+	}
+	else if(i<1000)
+	{
+		number << "0" << i;
+	}
+	else
+	{
+		number << i;
+	}
+	return number.str();
+}
+
 int main()
 {
 	DataReader reader;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
-		reader.processLaserData();
+		std::string number = getNextMeasureAsString(i);
+		reader.processLaserData(number);
 	}
 	return 0;
 }

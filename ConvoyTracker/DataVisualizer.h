@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <fstream>
 #include <string>
+#include <sstream>
 
 #define CANVASSIZE 1000
 #define CANVASFACTOR 10
@@ -23,10 +24,10 @@ public:
 	DataVisualizer();
 	virtual ~DataVisualizer();
 
-	void visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments);
+	void visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number);
 
 private:
-	std::string colors[10];
+	std::string colors[20];
 };
 
 #endif /* DATAVISUALIZER_H_ */
