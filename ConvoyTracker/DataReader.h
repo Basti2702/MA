@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <math.h>
+#include <limits.h>
 
 #define MEASUREPATH "/home/basti/MA/ConvoyTracker/Laserdata/LaserMessung"
 
@@ -29,11 +30,15 @@ public:
 
 private:
 	DataVisualizer visualizer;
+	int ID;
+
+
 	int getLaserData(laserdata_raw_array data, std::string number);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
-	std::vector<PC> computeVehicleState(std::vector<cartesian_segment> segments);
+	std::vector<PC> computeVehicleState(std::vector<cartesian_segment> segments, std::string number);
 	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
+	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };
 
 #endif /* DATAREADER_H_ */

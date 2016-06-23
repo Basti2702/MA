@@ -10,7 +10,7 @@
 
 DataReader::DataReader() {
 	// TODO Auto-generated constructor stub
-
+	ID = 0;
 }
 
 DataReader::~DataReader() {
@@ -161,7 +161,8 @@ int DataReader::processLaserData(std::string number)
 
 	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
 	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
-	//std::vector<PC> vehicles = computeVehicleState(transformedData);
+	std::vector<PC> vehicles = computeVehicleState(transformedData, number);
+
 	return 0;
 }
 
@@ -232,13 +233,78 @@ std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw
 	return transformedData;
 }
 
-std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> segments)
+std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> segments, std::string number)
 {
 	std::vector<PC> vehicles;
+
+
+	cartesian_segment currentSegment;
+	std::vector<laserdata_cartesian> relevantPoints;
+	std::vector<std::vector<laserdata_cartesian> > toPlot;
+
 	for(uint i=0; i<segments.size(); i++)
 	{
-		cartesian_segment currentSeg = segments.at(i);
+		currentSegment = segments.at(i);
+		relevantPoints = getRelevantMeasuresFromSegment(currentSegment);
 
+		//ignore guard railing
+/*		if(relevantPoints.at(0).x == relevantPoints.at(1).x
+				&& relevantPoints.at(1).y == relevantPoints.at(1).y)
+		{
+			continue;
+		}
+		else if(relevantPoints.at(1).x == relevantPoints.at(2).x
+				&& relevantPoints.at(1).y == relevantPoints.at(2).y)
+		{
+			continue;
+		}*/
 
+		//we have three different points, compute bounds
+		PC vehicle;
+		double width = fabs(relevantPoints[2].y - relevantPoints[0].y);
+		if(width > 1.0)
+		{
+			vehicle.width = width;
+			vehicle.ID = ID;
+			vehicle.y = relevantPoints[0].y + width/2;
+			//vehicle.vx = own speed +- depending on x
+			//vehicle.vy = own speed +-
+			vehicle.x = relevantPoints[1].x;//middle x of Interval
+			vehicles.push_back(vehicle);
+			toPlot.push_back(relevantPoints);
+		}
 	}
+	visualizer.visualizeVehiclesAsRectangle(toPlot, number);
+	return vehicles;
+}
+
+/**
+ * Returns the a vector containing the left border, the nearest point and the right border of a given segment
+ */
+std::vector<laserdata_cartesian> DataReader::getRelevantMeasuresFromSegment(cartesian_segment segment)
+{
+	std::vector<laserdata_cartesian> relevantMeasures;
+	double leastMeasure = INT_MAX;
+	laserdata_cartesian leastLaser;
+	//left border is always the first measure in a segment
+	relevantMeasures.push_back(segment.measures.at(0));
+
+	//Search for the measure with the least distance to ourself
+	double tmp;
+	laserdata_cartesian tmpLaser;
+	for(int i=0; i<segment.numberOfMeasures; i++)
+	{
+		tmpLaser = segment.measures.at(i);
+		tmp = sqrt(tmpLaser.x * tmpLaser.x + tmpLaser.y * tmpLaser.y);
+		if(tmp < leastMeasure)
+		{
+			leastLaser = tmpLaser;
+			leastMeasure = tmp;
+		}
+	}
+	relevantMeasures.push_back(leastLaser);
+	//right border is always the last measure in a segment
+	relevantMeasures.push_back(segment.measures.at(segment.numberOfMeasures-1));
+
+	return relevantMeasures;
 }

@@ -25,6 +25,7 @@ public:
 	virtual ~DataVisualizer();
 
 	void visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number);
+	void visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number);
 
 private:
 	std::string colors[20];

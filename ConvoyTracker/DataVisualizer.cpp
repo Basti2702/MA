@@ -41,7 +41,8 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 {
 	  std::ofstream myfile;
 	  std::ostringstream filename;
-	  filename << "./Visualization/PointCloud" << number << ".html";
+//	  filename << "./Visualization/PointCloud" << number << ".html";
+	  filename << "./PointCloud.html";
 	  myfile.open (filename.str().c_str());
 	  myfile << "<!DOCTYPE html>" << std::endl;
 	  myfile << "<html>" << std::endl;
@@ -69,6 +70,48 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 	  myfile << "</html>" << std::endl;
 	  myfile.close();
 }
+
+void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number)
+{
+	std::ofstream myfile;
+	std::ostringstream filename;
+//	  filename << "./Visualization/Vehicles" << number << ".html";
+	filename << "./Vehicles.html";
+	myfile.open(filename.str().c_str());
+	myfile << "<!DOCTYPE html>" << std::endl;
+	myfile << "<html>" << std::endl;
+	myfile << "<body>" << std::endl;
+	myfile << "<svg width=\"" << CANVASSIZE << "\" height=\"" << CANVASSIZE
+			<< "\">" << std::endl;
+
+	//compute coordinates on Canvas, default 0 is on top but should be on the bottom and in the middle
+	int xOnCanvas = CANVASSIZE;
+	int yOnCanvas = CANVASSIZE / 2;
+
+	int ax, ay, bx, by, cx, cy;
+
+	for (uint i = 0; i < segments.size(); i++) {
+		ax = xOnCanvas - (segments.at(i).at(0).x * CANVASFACTOR);
+		ay = yOnCanvas + (segments.at(i).at(0).y * CANVASFACTOR);
+		bx = xOnCanvas - (segments.at(i).at(1).x * CANVASFACTOR);
+		by = yOnCanvas + (segments.at(i).at(1).y * CANVASFACTOR);
+		cx = xOnCanvas - (segments.at(i).at(2).x * CANVASFACTOR);
+		cy = yOnCanvas + (segments.at(i).at(2).y * CANVASFACTOR);
+
+		xOnCanvas -= (0 * CANVASFACTOR);
+		yOnCanvas += (0 * CANVASFACTOR);
+		myfile << "<polyline points=\"" << ay << "," << ax << " " << by << ","
+				<< bx << " " << cy << "," << cx
+				<< "\" style=\"fill:none;stroke:" << colors[i]
+				<< ";stroke-width:3\" />" << std::endl;
+		//	myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"blue\" stroke-width=\"4\" fill=\"blue\"/>" << std::endl;
+	}
+	myfile << "</svg>" << std::endl;
+	myfile << "</body>" << std::endl;
+	myfile << "</html>" << std::endl;
+	myfile.close();
+}
+
 
 
 

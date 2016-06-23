@@ -11,8 +11,7 @@
 #include <string>
 #include <iostream>
 
-#define NUM_MEASUREMENT 1242
-
+#define NUM_MEASUREMENT 322
 class ConvoyTracker {
 public:
 	ConvoyTracker();
