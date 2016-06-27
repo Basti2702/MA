@@ -40,7 +40,7 @@ struct PC{
 	double vx; //velocity x angular velocity
 	double vy; //velocity y
 //	double w; //angular velocity see https://en.wikipedia.org/wiki/Angular_velocity
-//	double theta; //orientation regarding own vehicles direction
+	double theta; //orientation regarding own vehicles direction
 
 	//general Informations, not necessary for kalman filter
 	double width; //width of vehicle

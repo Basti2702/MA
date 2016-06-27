@@ -160,7 +160,9 @@ int DataReader::processLaserData(std::string number)
 	std::cout << "Extracted " << segments.size() << "Objects from Laserdata" << std::endl;
 
 	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
+	std::cout << "Start PointCloud Visualization" << std::endl;
 	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
+	std::cout << "End PointCloud Visualization" << std::endl;
 	std::vector<PC> vehicles = computeVehicleState(transformedData, number);
 
 	return 0;
@@ -186,8 +188,8 @@ double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 	double C1, C2;
 	double min_distance = p2.distance;
 
-	double deltaAlpha = p2.angle-p1.angle;
-	deltaAlpha = (deltaAlpha * M_PI / 180.0);
+	double deltaAlpha;
+	deltaAlpha = (0.25 * M_PI / 180.0);
 
 	if(p1.distance < p2.distance)
 	{
@@ -262,8 +264,25 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 		//we have three different points, compute bounds
 		PC vehicle;
 		double width = fabs(relevantPoints[2].y - relevantPoints[0].y);
-		if(width > 1.0)
+		double length = fabs(relevantPoints[2].x - relevantPoints[0].x);
+		//compute orientation of object regarding to the driving direction of our own car
+		//own direction vector(x,y): (1,0)
+		if(length > 2)
 		{
+			length = fabs(relevantPoints[1].x - relevantPoints[0].x);
+			width = fabs(relevantPoints[1].y - relevantPoints[0].y);
+		}
+
+		double theta = acos(length/(1*sqrt(width*width + length*length))) * 180.0 / M_PI;
+
+		//objects should not be classified as vehicle if their orientation is bigger than 45°
+		//real vehicles should never be rotated over that value
+
+		if(theta > 60 && width > 1)
+		{
+		/*	std::cout << "Theta: " << theta << std::endl;
+			std::cout << "Length: " << length << std::endl;
+			std::cout << "Width: " << width << std::endl;*/
 			vehicle.width = width;
 			vehicle.ID = ID;
 			vehicle.y = relevantPoints[0].y + width/2;
@@ -274,6 +293,7 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 			toPlot.push_back(relevantPoints);
 		}
 	}
+	std::cout<<"Extracted " << toPlot.size() << " Vehicles from Data" << std::endl;
 	visualizer.visualizeVehiclesAsRectangle(toPlot, number);
 	return vehicles;
 }

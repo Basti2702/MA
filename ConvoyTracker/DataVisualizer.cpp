@@ -41,8 +41,8 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 {
 	  std::ofstream myfile;
 	  std::ostringstream filename;
-//	  filename << "./Visualization/PointCloud" << number << ".html";
-	  filename << "./PointCloud.html";
+	  filename << "./Visualization/PointCloud" << number << ".html";
+//	  filename << "./PointCloud.html";
 	  myfile.open (filename.str().c_str());
 	  myfile << "<!DOCTYPE html>" << std::endl;
 	  myfile << "<html>" << std::endl;
@@ -60,7 +60,18 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 
 			xOnCanvas -= (data.x * CANVASFACTOR);
 			yOnCanvas += (data.y *CANVASFACTOR);
-			myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"" << colors[i]<<"\" stroke-width=\"4\" fill=\"" << colors[i]<<"\"/>" << std::endl;
+
+			std::string color;
+			if(i > 19)
+			{
+				color = colors[19];
+			}
+			else
+			{
+				color = colors[i];
+			}
+
+			myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"" << color <<"\" stroke-width=\"4\" fill=\"" << color <<"\"/>" << std::endl;
 		//	myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"blue\" stroke-width=\"4\" fill=\"blue\"/>" << std::endl;
 
 		}
@@ -75,8 +86,8 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 {
 	std::ofstream myfile;
 	std::ostringstream filename;
-//	  filename << "./Visualization/Vehicles" << number << ".html";
-	filename << "./Vehicles.html";
+    filename << "./Visualization/Vehicles" << number << ".html";
+//	filename << "./Vehicles.html";
 	myfile.open(filename.str().c_str());
 	myfile << "<!DOCTYPE html>" << std::endl;
 	myfile << "<html>" << std::endl;

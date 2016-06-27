@@ -16,7 +16,7 @@
 #include <string>
 #include <sstream>
 
-#define CANVASSIZE 1000
+#define CANVASSIZE 2000
 #define CANVASFACTOR 10
 
 class DataVisualizer {

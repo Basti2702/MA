@@ -44,7 +44,7 @@ std::string getNextMeasureAsString(int i)
 int main()
 {
 	DataReader reader;
-	for(int i=321; i<NUM_MEASUREMENT; i++)
+	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::string number = getNextMeasureAsString(i);
 		reader.processLaserData(number);
