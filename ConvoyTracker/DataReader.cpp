@@ -36,7 +36,7 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 	std::string segment;
 	/*
 	 * Laserscanner range 145° with resolution of 0.25° -> 580 values + Zero value = 581
-	 *-72°  0°    72°
+	 *-72,5° 0°  72,5°
 	 * \    |    /
 	 *  \   |   /
 	 *   \  |  /
@@ -286,8 +286,10 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 			vehicle.width = width;
 			vehicle.ID = ID;
 			vehicle.y = relevantPoints[0].y + width/2;
+			//vehicle.x = relevantPoints[0].x;
 			//vehicle.vx = own speed +- depending on x
 			//vehicle.vy = own speed +-
+			vehicle.theta = theta;
 			vehicle.x = relevantPoints[1].x;//middle x of Interval
 			vehicles.push_back(vehicle);
 			toPlot.push_back(relevantPoints);

@@ -6,8 +6,7 @@
  */
 
 #include "ConvoyTracker.h"
-#include "DataReader.h"
-#include "data.h"
+
 
 ConvoyTracker::ConvoyTracker() {
 	// TODO Auto-generated constructor stub

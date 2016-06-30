@@ -10,6 +10,9 @@
 
 #include <string>
 #include <iostream>
+#include "DataReader.h"
+#include "data.h"
+#include "IntervallMap.h"
 
 #define NUM_MEASUREMENT 1242
 //1242
