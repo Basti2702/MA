@@ -26,7 +26,7 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
-	int processLaserData(std::string number);
+	std::vector<PC> processLaserData(std::string number);
 
 private:
 	DataVisualizer visualizer;

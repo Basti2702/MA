@@ -43,10 +43,13 @@ std::string getNextMeasureAsString(int i)
 int main()
 {
 	DataReader reader;
+	IntervalMap intervalMap;
+	std::vector<PC> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::string number = getNextMeasureAsString(i);
-		reader.processLaserData(number);
+		vehicles = reader.processLaserData(number);
+		//TODO: iterate over vehicles and assosciate//insert them into the intervalMap
 	}
 	return 0;
 }

@@ -108,7 +108,7 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-int DataReader::processLaserData(std::string number)
+std::vector<PC> DataReader::processLaserData(std::string number)
 {
 	laserdata_raw data[NUMBER_LASERRAYS];
 	laserdata_raw currentMeasure;
@@ -165,7 +165,7 @@ int DataReader::processLaserData(std::string number)
 	std::cout << "End PointCloud Visualization" << std::endl;
 	std::vector<PC> vehicles = computeVehicleState(transformedData, number);
 
-	return 0;
+	return vehicles;
 }
 
 /*
