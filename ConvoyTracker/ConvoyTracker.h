@@ -13,6 +13,7 @@
 #include "DataReader.h"
 #include "data.h"
 #include "IntervalMap.h"
+#include "PGMReader.h"
 
 #define NUM_MEASUREMENT 1242
 //1242
