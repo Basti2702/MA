@@ -34,7 +34,7 @@ int** PGMReader::readPGMFile(const char* filename)
     }
 
     fgets(version, sizeof(version), pgmFile);
-    if (strcmp(version, "P5")) {
+    if (strcmp(version, "P2")) {
         fprintf(stderr, "Wrong file type!\n");
         exit(EXIT_FAILURE);
     }
@@ -46,8 +46,8 @@ int** PGMReader::readPGMFile(const char* filename)
     skipComments(pgmFile);
     fscanf(pgmFile, "%d", &max_gray);
     skipComments(pgmFile);
-  //  fscanf(pgmFile, "%d", &carX);
-  //  fgetc(pgmFile);
+    fscanf(pgmFile, "%d", &carX);
+    fgetc(pgmFile);
 
     fprintf(stdout,"Create Matrix with %d cols and %d rows, max_grey = %d CarX = %d\n", col, row, max_gray, carX);
 
@@ -55,25 +55,14 @@ int** PGMReader::readPGMFile(const char* filename)
     numRow = row;
     numCol = col;
     max_grey = max_gray;
- //   vehicleX = carX;
-    if (max_gray > 255)
+    int temp;
+    vehicleX = carX;
     {
         for (i = 0; i < row; ++i)
         {
             for (j = 0; j < col; ++j) {
-                hi = fgetc(pgmFile);
-                lo = fgetc(pgmFile);
-                matrix[i][j] = (hi << 8) + lo;
-            }
-    	}
-    }
-    else
-    {
-        for (i = 0; i < row; ++i)
-        {
-            for (j = 0; j < col; ++j) {
-                lo = fgetc(pgmFile);
-                matrix[i][j] = lo;
+            	fscanf(pgmFile, "%d", &temp);
+                matrix[i][j] = temp;
             }
         }
     }
@@ -163,10 +152,10 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             	fprintf(stdout, "Laser out of bound!\n");
             	return;
             }
-            else if(image[x1][y1] == max_grey)
+            else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
-            	fprintf(stdout, "Obstacel hit at x = %d, y = %d\n", x1, y1);
+            	fprintf(stdout, "Obstacel hit at x = %d, y = %d value: %d\n", x1, y1, image[x1][y1]);
             	return;
             }
 //            plot(x1, y1);
@@ -198,7 +187,7 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
-            	fprintf(stdout, "Obstacel hit at x = %d, y = %d\n", x1, y1);
+            	fprintf(stdout, "Obstacel hit at x = %d, y = %d value: %d\n", x1, y1, image[x1][y1]);
             	return;
             }
        //     plot(x1, y1);
@@ -214,7 +203,7 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
  */
 void PGMReader::simulateLaserRays()
 {
-	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/Laser1.pgm";
+	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/LaserTest.pgm";
 	int** image = readPGMFile(filename.c_str());
 	if(image == NULL)
 	{
