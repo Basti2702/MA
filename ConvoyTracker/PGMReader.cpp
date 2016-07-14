@@ -213,7 +213,7 @@ double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
 void PGMReader::simulateLaserRays()
 {
 	std::ofstream laserMeasureFile;
-	laserMeasureFile.open ("./Laserdata/LaserMessung1.txt");
+	laserMeasureFile.open ("./Laserdata/LaserMessung0000.txt");
 
 	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/LaserTest.pgm";
 	int** image = readPGMFile(filename.c_str());
@@ -274,7 +274,7 @@ void PGMReader::simulateLaserRays()
 		//compute straight line from our vehicle to the image border with given angle/vector to get the distance value for current laserray
 		int valid = 1;
 		double distance = bresenham(image,startX, startY, endX, endY);
-		if(distance == 501.0)
+		if(distance == 501.0 || distance == 0)
 		{
 			valid = 0;
 		}
@@ -290,8 +290,8 @@ void PGMReader::simulateLaserRays()
 		}
 		//simulate uncertainty in measure up to +-10%
 		double uncertainty = rand() % 10 +1;
-		uncertainty = 1/uncertainty;
-
+		uncertainty /= 1000.0;
+		fprintf(stdout, "Unsicherheit: %f", uncertainty);
 		int sign = rand() % 2;
 		if(sign)
 		{
@@ -302,7 +302,7 @@ void PGMReader::simulateLaserRays()
 			distance -= distance*uncertainty;
 		}
 		//change unit from cm to m
-		distance /= 100;
+		distance /= 100.0;
 		laserMeasureFile << valid << " " << distance << std::endl;
 
 	}
