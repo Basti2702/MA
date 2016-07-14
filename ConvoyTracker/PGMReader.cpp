@@ -115,7 +115,7 @@ void PGMReader::deallocate_dynamic_matrix(int **matrix, int row)
     free(matrix);
 }
 
-void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
+double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
 {
     int delta_x(x2 - x1);
     // if x1 == x2, then it does not matter what we set here
@@ -126,6 +126,9 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
     // if y1 == y2, then it does not matter what we set here
     signed char const iy((delta_y > 0) - (delta_y < 0));
     delta_y = std::abs(delta_y) << 1;
+
+    int startX = x1;
+    int startY = y1;
 
  //   plot(x1, y1);
 
@@ -150,16 +153,19 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             {
             	//out of bounds
             	fprintf(stdout, "Laser out of bound!\n");
-            	return;
+            	return 501.0;
             }
             else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
-            	fprintf(stdout, "Obstacel hit at x = %d, y = %d value: %d\n", x1, y1, image[x1][y1]);
-            	return;
+            	double distance = sqrt((startX-x1)*(startX-x1) + (startY-y1)*(startY-y1));
+            	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
+            	return distance;
             }
 //            plot(x1, y1);
         }
+        //reached target without hitting an object -> out of bound
+        return 501.0;
     }
     else
     {
@@ -182,16 +188,19 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             {
             	//out of bounds
             	fprintf(stdout, "Laser out of bound!\n");
-            	return;
+            	return 501.0;
             }
             else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
-            	fprintf(stdout, "Obstacel hit at x = %d, y = %d value: %d\n", x1, y1, image[x1][y1]);
-            	return;
+            	double distance = sqrt((startX-x1)*(startX-x1) + (startY-y1)*(startY-y1));
+            	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
+            	return distance;
             }
        //     plot(x1, y1);
         }
+        //reached target without hitting an object -> out of bound
+        return 501.0;
     }
 }
 
@@ -203,6 +212,9 @@ void PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
  */
 void PGMReader::simulateLaserRays()
 {
+	std::ofstream laserMeasureFile;
+	laserMeasureFile.open ("./Laserdata/LaserMessung1.txt");
+
 	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/LaserTest.pgm";
 	int** image = readPGMFile(filename.c_str());
 	if(image == NULL)
@@ -216,8 +228,15 @@ void PGMReader::simulateLaserRays()
 	int startY = 545;
 	int vecX = 1;
 	int vecY = 0;
+
+	//initialize random
+	srand(time(NULL));
+
 	for(angle = -72.5; angle <= 72.5; angle+=0.25)
 	{
+		//we don´t care about the first 4 fields in simulation so fill it with 0
+		laserMeasureFile << "0 0 0 0 ";
+
 		//compute vector for current angle
 		double angleInRadians = angle*M_PI/180.0;
 		double endX = vecX * cos(angleInRadians) + vecY* sin(angleInRadians);
@@ -236,11 +255,6 @@ void PGMReader::simulateLaserRays()
 			double tmpY = endY;
 			endY = 0;
 			endX = 9999 + stepsToBorder/(tmpY/tmpX);
-	/*		if(endX < 0)
-			{
-				endY = vehicleX + tmpX*9999;
-				endX = 0;
-			}*/
 		}
 		else if(angle > 0)
 		{
@@ -257,9 +271,43 @@ void PGMReader::simulateLaserRays()
 			endY = 545;
 		}
 
-		bresenham(image,startX, startY, endX, endY);
+		//compute straight line from our vehicle to the image border with given angle/vector to get the distance value for current laserray
+		int valid = 1;
+		double distance = bresenham(image,startX, startY, endX, endY);
+		if(distance == 501.0)
+		{
+			valid = 0;
+		}
+		else
+		{
+			//with propability of @define NOISE_RATIO percent the given distance is not valid to simulate noise
+			int random = rand() % 100;
+			if(random <= NOISE_RATIO)
+			{
+				valid = 0;
+			}
+
+		}
+		//simulate uncertainty in measure up to +-10%
+		double uncertainty = rand() % 10 +1;
+		uncertainty = 1/uncertainty;
+
+		int sign = rand() % 2;
+		if(sign)
+		{
+			distance += distance*uncertainty;
+		}
+		else
+		{
+			distance -= distance*uncertainty;
+		}
+		//change unit from cm to m
+		distance /= 100;
+		laserMeasureFile << valid << " " << distance << std::endl;
+
 	}
 
 	//free memory
 	deallocate_dynamic_matrix(image, numRow);
+	laserMeasureFile.close();
 }

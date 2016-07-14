@@ -47,10 +47,10 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 	double angle = -72.5;
 
     //Skip first 581 lines, just read out the second level of datas
-    while(counter < NUMBER_LASERRAYS && std::getline( input, line )) {
+  /*  while(counter < NUMBER_LASERRAYS && std::getline( input, line )) {
     	++counter;
   //  	std::cout<< counter <<'\n';
-    }
+    }*/
 
     //now read the data we are interested in
     counter = 0;
