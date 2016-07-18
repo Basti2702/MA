@@ -35,148 +35,43 @@ void IntervalMap::allocateIntervalMap() {
 		map[i] = new std::set<PC>();
 	}*/
 	map = new node;
-	map->key_value = 49.5;
+	map->key_value = 50;
 	map->tracks = NULL;
 	map->left = NULL;
 	map->right = NULL;
 
-/*	//building up left tree
-	insertInterval(map, 24.5);
-	insertInterval(map, 12.5);
-	insertInterval(map, 5.5);
-	insertInterval(map, 4.5);
-	insertInterval(map, 2.5);
-	insertInterval(map, 3.5);
-	insertInterval(map, 1.5);
-	insertInterval(map, 0.5);
-	insertInterval(map, 9.5);
-	insertInterval(map, 7.5);
-	insertInterval(map, 6.5);
-	insertInterval(map, 8.5);
-	insertInterval(map, 11.5);
-	insertInterval(map, 10.5);
-	insertInterval(map, 18.5);
-	insertInterval(map, 15.5);
-	insertInterval(map, 14.5);
-	insertInterval(map, 17.5);
-	insertInterval(map, 13.5);
-	insertInterval(map, 16.5);
-	insertInterval(map, 21.5);
-	insertInterval(map, 20.5);
-	insertInterval(map, 23.5);
-	insertInterval(map, 22.5);
-	insertInterval(map, 19.5);
-
-	insertInterval(map, 12.5 + 25.0);
-	insertInterval(map, 5.5 + 25.0);
-	insertInterval(map, 4.5 + 25.0);
-	insertInterval(map, 2.5 + 25.0);
-	insertInterval(map, 3.5 + 25.0);
-	insertInterval(map, 1.5 + 25.0);
-	insertInterval(map, 0.5 + 25.0);
-	insertInterval(map, 9.5 + 25.0);
-	insertInterval(map, 7.5 + 25.0);
-	insertInterval(map, 6.5 + 25.0 );
-	insertInterval(map, 8.5 + 25.0);
-	insertInterval(map, 11.5 + 25.0);
-	insertInterval(map, 10.5 + 25.0);
-	insertInterval(map, 18.5 + 25.0);
-	insertInterval(map, 15.5 + 25.0);
-	insertInterval(map, 14.5 + 25.0);
-	insertInterval(map, 17.5 + 25.0);
-	insertInterval(map, 13.5 + 25.0);
-	insertInterval(map, 16.5 + 25.0);
-	insertInterval(map, 21.5 + 25.0);
-	insertInterval(map, 20.5 + 25.0);
-	insertInterval(map, 23.5 + 25.0);
-	insertInterval(map, 22.5 + 25.0);
-	insertInterval(map, 19.5 + 25.0);
-
-	//build right tree
-	insertInterval(map, 24.5 + 50.0);
-	insertInterval(map, 12.5 + 50.0);
-	insertInterval(map, 5.5 + 50.0);
-	insertInterval(map, 4.5 + 50.0);
-	insertInterval(map, 2.5 + 50.0);
-	insertInterval(map, 3.5 + 50.0);
-	insertInterval(map, 1.5 + 50.0);
-	insertInterval(map, 0.5 + 50.0);
-	insertInterval(map, 9.5 + 50.0);
-	insertInterval(map, 7.5 + 50.0);
-	insertInterval(map, 6.5 + 50.0);
-	insertInterval(map, 8.5 + 50.0);
-	insertInterval(map, 11.5 + 50.0);
-	insertInterval(map, 10.5 + 50.0);
-	insertInterval(map, 18.5 + 50.0);
-	insertInterval(map, 15.5 + 50.0);
-	insertInterval(map, 14.5 + 50.0);
-	insertInterval(map, 17.5 + 50.0);
-	insertInterval(map, 13.5 + 50.0);
-	insertInterval(map, 16.5 + 50.0);
-	insertInterval(map, 21.5 + 50.0);
-	insertInterval(map, 20.5 + 50.0);
-	insertInterval(map, 23.5 + 50.0);
-	insertInterval(map, 22.5 + 50.0);
-	insertInterval(map, 19.5 + 50.0);
-
-	insertInterval(map, 12.5 + 75.0);
-	insertInterval(map, 5.5 + 75.0);
-	insertInterval(map, 4.5 + 75.0);
-	insertInterval(map, 2.5 + 75.0);
-	insertInterval(map, 3.5 + 75.0);
-	insertInterval(map, 1.5 + 75.0);
-	insertInterval(map, 0.5 + 75.0);
-	insertInterval(map, 9.5 + 75.0);
-	insertInterval(map, 7.5 + 75.0);
-	insertInterval(map, 6.5 + 75.0 );
-	insertInterval(map, 8.5 + 75.0);
-	insertInterval(map, 11.5 + 75.0);
-	insertInterval(map, 10.5 + 75.0);
-	insertInterval(map, 18.5 + 75.0);
-	insertInterval(map, 15.5 + 75.0);
-	insertInterval(map, 14.5 + 75.0);
-	insertInterval(map, 17.5 + 75.0);
-	insertInterval(map, 13.5 + 75.0);
-	insertInterval(map, 16.5 + 75.0);
-	insertInterval(map, 21.5 + 75.0);
-	insertInterval(map, 20.5 + 75.0);
-	insertInterval(map, 23.5 + 75.0);
-	insertInterval(map, 22.5 + 75.0);
-	insertInterval(map, 19.5 + 75.0);*/
-
-	for(double i=0; i<4.0; i+=1.0)
+	insertInterval(map, 25);
+	insertInterval(map, 75);
+	for(int i=0; i<4; i++)
 	{
-		insertInterval(map, 24.5 + i*25.0);
-		insertInterval(map, 12.5 + i*25.0);
-		insertInterval(map, 5.5 + i*25.0);
-		insertInterval(map, 4.5 + i*25.0);
-		insertInterval(map, 2.5 + i*25.0);
-		insertInterval(map, 3.5 + i*25.0);
-		insertInterval(map, 1.5 + i*25.0);
-		insertInterval(map, 0.5 + i*25.0);
-		insertInterval(map, 9.5 + i*25.0);
-		insertInterval(map, 7.5 + i*25.0);
-		insertInterval(map, 6.5 + i*25.0);
-		insertInterval(map, 8.5 + i*25.0);
-		insertInterval(map, 11.5 + i*25.0);
-		insertInterval(map, 10.5 + i*25.0);
-		insertInterval(map, 18.5 + i*25.0);
-		insertInterval(map, 15.5 + i*25.0);
-		insertInterval(map, 14.5 + i*25.0);
-		insertInterval(map, 17.5 + i*25.0);
-		insertInterval(map, 13.5 + i*25.0);
-		insertInterval(map, 16.5 + i*25.0);
-		insertInterval(map, 21.5 + i*25.0);
-		insertInterval(map, 20.5 + i*25.0);
-		insertInterval(map, 23.5 + i*25.0);
-		insertInterval(map, 22.5 + i*25.0);
-		insertInterval(map, 19.5 + i*25.0);
+		insertInterval(map, 12 + i*25);
+		insertInterval(map, 6 + i*25);
+		insertInterval(map, 3 + i*25);
+		insertInterval(map, 5 + i*25);
+		insertInterval(map, 4 + i*25);
+		insertInterval(map, 1 + i*25);
+		insertInterval(map, 2 + i*25);
+		insertInterval(map, 9 + i*25);
+		insertInterval(map, 8 + i*25);
+		insertInterval(map, 7 + i*25);
+		insertInterval(map, 11 + i*25);
+		insertInterval(map, 10 + i*25);
+		insertInterval(map, 18 + i*25);
+		insertInterval(map, 15 + i*25);
+		insertInterval(map, 14 + i*25);
+		insertInterval(map, 13 + i*25);
+		insertInterval(map, 17 + i*25);
+		insertInterval(map, 16 + i*25);
+		insertInterval(map, 21 + i*25);
+		insertInterval(map, 20 + i*25);
+		insertInterval(map, 19 + i*25);
+		insertInterval(map, 23 + i*25);
+		insertInterval(map, 22 + i*25);
+		insertInterval(map, 24 + i*25);
 	}
-
-	for(double i=0; i<100.0; i+=1.0)
-	{
-		insertInterval(map, i);
-	}
+	insertInterval(map, 0);
+	//debug
+//	inorder(map);
 
 }
 
@@ -210,14 +105,14 @@ void IntervalMap::shiftStructure(double xMotion)
 	for (int i = 0; i < numIntervals; i++) {
 		//delete everything contained in
 		node* tmpNode = getInterval(map,0);
-		std::list<PC>* tmp = tmpNode->tracks;
-		tmp->clear();
+		pcNode* tmp = tmpNode->tracks;
+		destroy_PCTree(tmp);
 		for (int j = 0; j < numberOfIntervals-1; j++)
 		{
 			getInterval(map,j)->tracks = getInterval(map,j + 1)->tracks;
 		}
 	//	map[0] = tmp;
-		getInterval(map,numberOfIntervals-1)->tracks = tmp;
+		getInterval(map,numberOfIntervals-1)->tracks = NULL;
 	}
 
 }
@@ -291,14 +186,7 @@ void IntervalMap::insertInterval(node *leaf, double key)
 			leaf->left->key_value = key;
 			leaf->left->left = NULL;
 			leaf->left->right = NULL;
-			if(fmod(key, 1.0) == 0.0)
-			{
-				leaf->left->tracks = new std::list<PC>();
-			}
-			else
-			{
-				leaf->left->tracks = NULL;
-			}
+			leaf->left->tracks = NULL;
 		}
 		else
 		{
@@ -313,14 +201,7 @@ void IntervalMap::insertInterval(node *leaf, double key)
 			leaf->right->key_value = key;
 			leaf->right->left = NULL;
 			leaf->right->right = NULL;
-			if(fmod(key, 1.0) == 0.0)
-			{
-				leaf->right->tracks = new std::list<PC>();
-			}
-			else
-			{
-				leaf->right->tracks = NULL;
-			}
+			leaf->right->tracks = NULL;
 		}
 		else
 		{
@@ -340,7 +221,7 @@ void IntervalMap::destroy_tree(node *leaf)
     destroy_tree(leaf->right);
     if(leaf->tracks != NULL)
     {
-    	delete leaf->tracks;
+    	destroy_PCTree(leaf->tracks);
     }
     delete leaf;
   }
@@ -371,4 +252,124 @@ node* IntervalMap::getInterval(node* leaf, double interval)
 	{
 		return getInterval(leaf->right, interval);
 	}
+}
+
+void IntervalMap::inorder(node* tree)
+{
+	if(tree->left != NULL)
+	{
+			inorder(tree->left);
+	}
+	std::cout << tree->key_value << std::endl;
+	if(tree->right != NULL)
+	{
+		inorder(tree->right);
+	}
+}
+
+void IntervalMap::insertPCintoInterval(int interval, PC vehicle)
+{
+	node* intvl = getInterval(map, interval);
+	if(intvl == NULL)
+	{
+		std::cerr << "COULD NOT FIND INTERVALL!!" << std::endl;
+	}
+	insertPC(intvl->tracks, NULL, vehicle);
+}
+
+void IntervalMap::insertPC(pcNode* leaf, pcNode* parent, PC vehicle)
+{
+
+	double key = vehicle.y;
+	std::cout << "Key: " << key << std::endl;
+	if(leaf != NULL)
+	{
+		if(key < leaf->y)
+		{
+			insertPC(leaf->left, leaf, vehicle);
+		}
+		else if(key > leaf->y)
+		{
+			insertPC(leaf->right, leaf, vehicle);
+		}
+		else
+		{
+			//should never happen
+			std::cerr << "ERROR WHILE INSERTING NEW PC: VALUE ALREADY IN LIST!!"<< std::endl;
+			return;
+		}
+	}
+	else
+	{
+		std::cout << "created new node for key" << std::endl;
+		leaf = new pcNode;
+		leaf->y = key;
+		leaf->vehicle = vehicle;
+		leaf->left = NULL;
+		leaf->right = NULL;
+		leaf->parent = parent;
+	}
+}
+
+void IntervalMap::inorderTracks(int interval)
+{
+	node* intvl = getInterval(map,interval);
+	if(intvl == NULL)
+	{
+		std::cerr << "COULD NOT FIND INTERVALL!!" << std::endl;
+	}
+	inorder(intvl->tracks);
+}
+
+void IntervalMap::inorder(pcNode* root)
+{
+	std::cout << "piep" << std::endl;
+	if(root->left != NULL)
+	{
+		std::cout << "piep" << std::endl;
+			inorder(root->left);
+	}
+	std::cout << "get root" << std::endl;
+	std::cout << root->y << std::endl;
+	if(root->right != NULL)
+	{
+		inorder(root->right);
+	}
+}
+void IntervalMap::deletePCfromInterval(int interval, PC vehicle)
+{
+	node* intvl = getInterval(map,interval);
+	if(intvl->tracks == NULL)
+	{
+		std::cerr << "ERROR WHILE DELETING PC FROM INTERVAL: NO PC CONTAINED IN INTERVAL!" << std::endl;
+		return;
+	}
+
+}
+
+void IntervalMap::deletePC(pcNode* leaf, PC vehicle)
+{
+	double key = vehicle.y;
+	if(leaf->y == key)
+	{
+		remove(leaf);
+	}
+	else if(key < leaf->y)
+	{
+		deletePC(leaf->left, vehicle);
+	}
+	else
+	{
+		deletePC(leaf->right, vehicle);
+	}
+}
+
+void IntervalMap::destroy_PCTree(pcNode* root)
+{
+	  if(root!=NULL)
+	  {
+	    destroy_PCTree(root->left);
+	    destroy_PCTree(root->right);
+	    delete root;
+	  }
 }
