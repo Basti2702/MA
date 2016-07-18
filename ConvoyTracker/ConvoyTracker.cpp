@@ -42,8 +42,12 @@ std::string getNextMeasureAsString(int i)
 
 int main()
 {
-	PGMReader pgmReader;
-	pgmReader.simulateLaserRays();
+/*	PGMReader pgmReader;
+	for(int i=0; i<NUM_MEASUREMENT; i++)
+	{
+		std::string number = getNextMeasureAsString(i);
+		pgmReader.simulateLaserRays(number);
+	}*/
 	DataReader reader;
 	IntervalMap intervalMap;
 	std::vector<PC> vehicles;

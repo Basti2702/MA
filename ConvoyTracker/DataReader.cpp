@@ -263,10 +263,20 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 
 		//we have three different points, compute bounds
 		PC vehicle;
+		//right point - left point
 		double width = fabs(relevantPoints[2].y - relevantPoints[0].y);
 		double length = fabs(relevantPoints[2].x - relevantPoints[0].x);
+		double nearestLengthLeft = fabs(relevantPoints[1].x - relevantPoints[0].x);
+		double nearestLengthRight = fabs(relevantPoints[1].x - relevantPoints[2].x);
+		double nearestWidthLeft = fabs(relevantPoints[1].y - relevantPoints[0].y);
+		double nearestWidthRight = fabs(relevantPoints[1].y - relevantPoints[2].y);
 		//compute orientation of object regarding to the driving direction of our own car
 		//own direction vector(x,y): (1,0)
+	/*	std::cout << i << std::endl;
+		std::cout << "left x = " << relevantPoints[0].x << " y = " << relevantPoints[0].y << std::endl;
+		std::cout << "nearest x = " << relevantPoints[1].x << " y = " << relevantPoints[1].y << std::endl;
+		std::cout << "right x = " << relevantPoints[2].x << " y = " << relevantPoints[2].y << std::endl;*/
+
 		if(length > 2)
 		{
 			length = fabs(relevantPoints[1].x - relevantPoints[0].x);
@@ -275,14 +285,35 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 
 		double theta = acos(length/(1*sqrt(width*width + length*length))) * 180.0 / M_PI;
 
+		double thetaLeft = acos(nearestLengthLeft/(1*sqrt(nearestWidthLeft*nearestWidthLeft + nearestLengthLeft*nearestLengthLeft))) * 180.0 / M_PI;
+
+		double thetaRight = acos(nearestLengthRight/(1*sqrt(nearestWidthRight*nearestWidthRight + nearestLengthRight*nearestLengthRight))) * 180.0 / M_PI;
+
 		//objects should not be classified as vehicle if their orientation is bigger than 45°
 		//real vehicles should never be rotated over that value
 
-		if(theta > 60 && width > 1)
-		{
 		/*	std::cout << "Theta: " << theta << std::endl;
+			std::cout << "ThetaLeft: " << thetaLeft << std::endl;
+			std::cout << "ThetaRight: " << thetaRight << std::endl;
 			std::cout << "Length: " << length << std::endl;
 			std::cout << "Width: " << width << std::endl;*/
+
+		//the detected car probably is defined with the points that form the biggest angle and are wider than 1m
+		if(thetaLeft + 5 > theta && nearestWidthLeft > 1)
+		{
+			theta = thetaLeft;
+			length = nearestLengthLeft;
+			width = nearestWidthLeft;
+		}
+		if(thetaRight + 5 > theta && nearestWidthRight > 1)
+		{
+			theta = thetaRight;
+			length = nearestLengthRight;
+			width = nearestWidthRight;
+		}
+		if(theta > 60 && width > 1)
+		{
+
 			vehicle.width = width;
 			vehicle.ID = ID;
 			vehicle.y = relevantPoints[0].y + width/2;

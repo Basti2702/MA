@@ -11,6 +11,7 @@
 #include <vector>
 
 #define NUMBER_LASERRAYS 581
+#define MEASUREPATH "./Laserdata/LaserMessung"
 
 typedef struct laserdata_raw{
 	double angle;

@@ -15,7 +15,7 @@
 #include "IntervalMap.h"
 #include "PGMReader.h"
 
-#define NUM_MEASUREMENT 1
+#define NUM_MEASUREMENT 10
 //1242
 class ConvoyTracker {
 public:

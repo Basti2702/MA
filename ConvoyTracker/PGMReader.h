@@ -19,6 +19,8 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include "data.h"
 
 #define NOISE_RATIO 20
 
@@ -29,7 +31,7 @@ public:
 
 
 	void deallocate_dynamic_matrix(int **matrix, int row);
-	void simulateLaserRays();
+	void simulateLaserRays(std::string number);
 
 
 private:

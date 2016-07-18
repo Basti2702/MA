@@ -41,8 +41,8 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 {
 	  std::ofstream myfile;
 	  std::ostringstream filename;
-//	  filename << "./Visualization/PointCloud" << number << ".html";
-	  filename << "./PointCloud.html";
+	  filename << "./Visualization/PointCloud" << number << ".html";
+//	  filename << "./PointCloud.html";
 	  myfile.open (filename.str().c_str());
 	  myfile << "<!DOCTYPE html>" << std::endl;
 	  myfile << "<html>" << std::endl;
@@ -86,8 +86,8 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 {
 	std::ofstream myfile;
 	std::ostringstream filename;
-//    filename << "./Visualization/Vehicles" << number << ".html";
-	filename << "./Vehicles.html";
+    filename << "./Visualization/Vehicles" << number << ".html";
+//	filename << "./Vehicles.html";
 	myfile.open(filename.str().c_str());
 	myfile << "<!DOCTYPE html>" << std::endl;
 	myfile << "<html>" << std::endl;

@@ -19,7 +19,7 @@
 #include <math.h>
 #include <limits.h>
 
-#define MEASUREPATH "/home/basti/MA/ConvoyTracker/Laserdata/LaserMessung"
+
 
 class DataReader {
 public:

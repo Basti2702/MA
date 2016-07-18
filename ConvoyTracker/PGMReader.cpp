@@ -210,10 +210,12 @@ double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
  *
  * Car position in matrix: (545, 9999) (y, x)
  */
-void PGMReader::simulateLaserRays()
+void PGMReader::simulateLaserRays(std::string number)
 {
 	std::ofstream laserMeasureFile;
-	laserMeasureFile.open ("./Laserdata/LaserMessung0000.txt");
+	std::ostringstream measurePath;
+	measurePath << MEASUREPATH << number << ".txt";
+	laserMeasureFile.open (measurePath.str().c_str());
 
 	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/LaserTest.pgm";
 	int** image = readPGMFile(filename.c_str());
