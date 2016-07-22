@@ -47,7 +47,7 @@ public:
 	void rotateStructure(double angle, double yMotion);
 	void insertPCintoInterval(int interval, PC vehicle);
 	void deletePCfromInterval(int interval, PC vehicle);
-	void inorderTracks(int interval);
+	int inorderTracks(int interval);
 
 private:
 	void allocateIntervalMap();
@@ -55,8 +55,12 @@ private:
 	void insertInterval(node* leaf, double key);
 	void destroy_tree(node* leaf);
 	void destroy_PCTree(pcNode* root);
-	void insertPC(pcNode* leaf, pcNode* parent, PC vehicle);
+	void insertPC(pcNode* leaf, PC vehicle);
 	void deletePC(pcNode* leaf,PC vehicle, int interval);
+	node* getInterval(node *leaf, double Intervall);
+	pcNode* getPC(pcNode* leaf, int index, int& count);
+	pcNode* getPCfromInterval(int interval, int index);
+
 	void swap_near_nodes(pcNode*child, pcNode*parent, int interval);
 	void swap_far_nodes(pcNode*a, pcNode*b, int interval);
 	void swap_nodes(pcNode*a, pcNode*b, int interval);
@@ -66,10 +70,10 @@ private:
 	pcNode* get_prev_node(pcNode*now);
 	void remove(pcNode*node, int interval);
 	pcNode** get_parent_ptr(pcNode*_node, int interval);
-	node* getInterval(node *leaf, double Intervall);
+
 
 	void inorder(node* tree);
-	void inorder(pcNode* root);
+	int inorderPC(pcNode* root, int print);
 
 	int numberOfIntervals;
 	int intervalLength;

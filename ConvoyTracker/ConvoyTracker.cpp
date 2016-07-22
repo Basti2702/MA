@@ -51,21 +51,17 @@ int main()
 	DataReader reader;
 	IntervalMap intervalMap;
 	PC test, test2, test3;
-	test.y = 10;
+	int size;
+	test.y = 0;
+	test.x = 5.5;
 	test2.y = 0;
+	test2.x = 5.5;
+	test2.theta = 45;
+	test2.ID = 42;
 	test3.y = -5;
-	intervalMap.insertPCintoInterval(5, test2);
-	intervalMap.inorderTracks(5);
-	std::cout << std::endl << "---------------------------" << std::endl;
+	test3.x = 5.5;
 	intervalMap.insertPCintoInterval(5, test);
-	intervalMap.inorderTracks(5);
-	std::cout << std::endl << "---------------------------" << std::endl;
-	intervalMap.insertPCintoInterval(5, test3);
-	intervalMap.inorderTracks(5);
-	std::cout << std::endl << "---------------------------" << std::endl;
-	intervalMap.deletePCfromInterval(5, test);
-	intervalMap.inorderTracks(5);
-	std::cout << std::endl << "---------------------------" << std::endl;
+	intervalMap.rotateStructure(45,0);
 	std::vector<PC> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
