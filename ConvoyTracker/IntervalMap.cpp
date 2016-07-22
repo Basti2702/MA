@@ -274,40 +274,65 @@ void IntervalMap::insertPCintoInterval(int interval, PC vehicle)
 	{
 		std::cerr << "COULD NOT FIND INTERVALL!!" << std::endl;
 	}
-	insertPC(intvl->tracks, NULL, vehicle);
+	if(intvl->tracks != NULL)
+	{
+		insertPC(intvl->tracks, NULL, vehicle);
+	}
+	else
+	{
+		intvl->tracks = new pcNode;
+		intvl->tracks->y = vehicle.y;
+		intvl->tracks->vehicle = vehicle;
+		intvl->tracks->left = NULL;
+		intvl->tracks->right = NULL;
+		intvl->tracks->parent = NULL;
+	}
 }
 
 void IntervalMap::insertPC(pcNode* leaf, pcNode* parent, PC vehicle)
 {
 
 	double key = vehicle.y;
-	std::cout << "Key: " << key << std::endl;
-	if(leaf != NULL)
+	if(key < leaf->y)
 	{
-		if(key < leaf->y)
+		if(leaf->left != NULL)
 		{
 			insertPC(leaf->left, leaf, vehicle);
 		}
-		else if(key > leaf->y)
+		else
+		{
+	//		std::cout << "created new node for key" << std::endl;
+			leaf->left = new pcNode;
+			leaf->left->y = key;
+			leaf->left->vehicle = vehicle;
+			leaf->left->left = NULL;
+			leaf->left->right = NULL;
+			leaf->left->parent = leaf;
+		}
+
+	}
+	else if(key > leaf->y)
+	{
+		if(leaf->right != NULL)
 		{
 			insertPC(leaf->right, leaf, vehicle);
 		}
 		else
 		{
-			//should never happen
-			std::cerr << "ERROR WHILE INSERTING NEW PC: VALUE ALREADY IN LIST!!"<< std::endl;
-			return;
+	//		std::cout << "created new node for key" << std::endl;
+			leaf->right = new pcNode;
+			leaf->right->y = key;
+			leaf->right->vehicle = vehicle;
+			leaf->right->left = NULL;
+			leaf->right->right = NULL;
+			leaf->right->parent = leaf;
 		}
 	}
 	else
 	{
-		std::cout << "created new node for key" << std::endl;
-		leaf = new pcNode;
-		leaf->y = key;
-		leaf->vehicle = vehicle;
-		leaf->left = NULL;
-		leaf->right = NULL;
-		leaf->parent = parent;
+		//should never happen
+		std::cerr << "ERROR WHILE INSERTING NEW PC: VALUE ALREADY IN LIST!!"<< std::endl;
+		return;
 	}
 }
 
@@ -323,14 +348,11 @@ void IntervalMap::inorderTracks(int interval)
 
 void IntervalMap::inorder(pcNode* root)
 {
-	std::cout << "piep" << std::endl;
 	if(root->left != NULL)
 	{
-		std::cout << "piep" << std::endl;
 			inorder(root->left);
 	}
-	std::cout << "get root" << std::endl;
-	std::cout << root->y << std::endl;
+	std::cout << root->y << " ";
 	if(root->right != NULL)
 	{
 		inorder(root->right);
@@ -344,23 +366,26 @@ void IntervalMap::deletePCfromInterval(int interval, PC vehicle)
 		std::cerr << "ERROR WHILE DELETING PC FROM INTERVAL: NO PC CONTAINED IN INTERVAL!" << std::endl;
 		return;
 	}
-
+	else
+	{
+		deletePC(intvl->tracks, vehicle, interval);
+	}
 }
 
-void IntervalMap::deletePC(pcNode* leaf, PC vehicle)
+void IntervalMap::deletePC(pcNode* leaf, PC vehicle, int interval)
 {
 	double key = vehicle.y;
 	if(leaf->y == key)
 	{
-		remove(leaf);
+		remove(leaf, interval);
 	}
 	else if(key < leaf->y)
 	{
-		deletePC(leaf->left, vehicle);
+		deletePC(leaf->left, vehicle, interval);
 	}
 	else
 	{
-		deletePC(leaf->right, vehicle);
+		deletePC(leaf->right, vehicle, interval);
 	}
 }
 
@@ -373,3 +398,157 @@ void IntervalMap::destroy_PCTree(pcNode* root)
 	    delete root;
 	  }
 }
+
+pcNode** IntervalMap::get_parent_ptr(pcNode* _node, int interval){
+    if(_node->parent == 0)
+    {
+    	node* intvl = getInterval(map, interval);
+        return &intvl->tracks;
+    }
+    else if(is_left_child(_node))
+    {
+        return &_node->parent->left;
+    }
+    else
+    {
+        return &_node->parent->right;
+    }
+}
+
+//helper methods for removing elements from pcNode
+	void IntervalMap::swap_near_nodes(pcNode*child, pcNode*parent, int interval){
+	    // Als erstes passen wir den unbeteiligten Großelternknoten an.
+	    *get_parent_ptr(parent, interval) = child;
+
+	    // Anschließend werden die Kind- und Elternzeiger ausgetauscht.
+	    std::swap(parent->left, child->left);
+	    std::swap(parent->right, child->right);
+	    std::swap(parent->parent, child->parent);
+
+	    // Da eines der Kinder getauscht wird benötigt es eine
+	    // sonder Behandlung.
+	    if(child->left == child)
+	        child->left = parent;
+	    else
+	        child->right = parent;
+
+	    // Nun sind alle Kindzeiger richtig und die Elternzeiger können
+	    // dem angepasst werden.
+	    if(child->left)
+	        child->left->parent = child;
+	    if(child->right)
+	        child->right->parent = child;
+	    if(parent->left)
+	        parent->left->parent = parent;
+	    if(parent->right)
+	        parent->right->parent = parent;
+
+	    // Na wer ist sich noch sicher ob wir nicht
+	    // bereits Zeigersalat haben? Besser testen!
+	}
+
+	void IntervalMap::swap_far_nodes(pcNode*a, pcNode*b, int interval){
+	    // Zuerst updaten wir die Zeiger der Eltern
+	    *get_parent_ptr(a, interval) = b;
+	    *get_parent_ptr(b, interval) = a;
+
+	    // Danach der Kinder
+	    if(a->left)
+	        a->left->parent = b;
+	    if(a->right)
+	        a->right->parent = b;
+	    if(b->left)
+	        b->left->parent = a;
+	    if(b->right)
+	        b->right->parent = a;
+
+	    // Und als letztes die der beiden Knoten
+	    std::swap(a->left, b->left);
+	    std::swap(a->right, b->right);
+	    std::swap(a->parent, b->parent);
+	}
+
+	void IntervalMap::swap_nodes(pcNode*a, pcNode*b, int interval){
+	    if(a->parent == b)
+	    {
+	    	std::cout << "swap near a b" << std::endl;
+	        swap_near_nodes(a, b, interval);
+	    }
+	    else if(b->parent == a)
+	    {
+	    	std::cout << "swap near b a" << std::endl;
+	        swap_near_nodes(b, a, interval);
+	    }
+	    else
+	    {
+	    	std::cout << "swap far" << std::endl;
+	        swap_far_nodes(a, b, interval);
+	    }
+	}
+
+
+	bool IntervalMap::is_left_child(const pcNode*node){
+	    if(node->parent == 0)
+	        return false; // Die Wurzel ist kein Kind
+	    else
+	        return node->parent->left == node;
+	}
+
+	bool IntervalMap::is_right_child(const pcNode*node){
+	    if(node->parent == 0)
+	        return false; // Die Wurzel ist kein Kind
+	    else
+	        return node->parent->right == node;
+	}
+
+
+
+	pcNode* IntervalMap::get_max(pcNode*node){
+	    pcNode*now = node;
+	    while(now->right)
+	        now = now->right;
+	    return now;
+	}
+
+	pcNode* IntervalMap::get_prev_node(pcNode*now){
+	    if(now->left)
+	        return get_max(now->left);
+	    else{
+	        while(now){
+	            if(is_right_child(now))
+	                return now->parent;
+	            else
+	                now = now->parent;
+	        }
+	        return 0; // Wir sind am Anfang angekommen
+	    }
+	}
+
+	void IntervalMap::remove(pcNode*node, int interval){
+	    // Ein Blatt
+	    if(!node->left && !node->right){
+	        *get_parent_ptr(node, interval) = 0;
+	        delete node;
+	    }
+	    // Nur ein Kind
+	    else if(node->left && !node->right){
+	        *get_parent_ptr(node, interval) = node->left;
+	        node->left->parent = node->parent;
+	        delete node;
+	    }else if(!node->left && node->right){
+	        *get_parent_ptr(node, interval) = node->right;
+	        node->right->parent = node->parent;
+	        delete node;
+	    }
+	    // Zwei Kinder
+	    else{
+	    	std::cout << "swap" << std::endl;
+	        pcNode*other = get_prev_node(node);
+	        std::cout << other->y << std::endl;
+	        swap_nodes(node, other, interval);
+	        std::cout << "after swap" << std::endl;
+	        // Löschen des Knoten durch Benutzen von einer
+	        // der beiden anderen Methoden
+	        remove(node, interval);
+	    }
+	}

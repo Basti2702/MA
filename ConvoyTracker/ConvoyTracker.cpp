@@ -54,16 +54,18 @@ int main()
 	test.y = 10;
 	test2.y = 0;
 	test3.y = -5;
-	intervalMap.insertPCintoInterval(5, test);
-	intervalMap.insertPCintoInterval(5, test);
-	std::cout << "---------------------------" << std::endl;
-	intervalMap.inorderTracks(5);
 	intervalMap.insertPCintoInterval(5, test2);
 	intervalMap.inorderTracks(5);
+	std::cout << std::endl << "---------------------------" << std::endl;
+	intervalMap.insertPCintoInterval(5, test);
+	intervalMap.inorderTracks(5);
+	std::cout << std::endl << "---------------------------" << std::endl;
 	intervalMap.insertPCintoInterval(5, test3);
 	intervalMap.inorderTracks(5);
-	intervalMap.deletePCfromInterval(5, test2);
+	std::cout << std::endl << "---------------------------" << std::endl;
+	intervalMap.deletePCfromInterval(5, test);
 	intervalMap.inorderTracks(5);
+	std::cout << std::endl << "---------------------------" << std::endl;
 	std::vector<PC> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
