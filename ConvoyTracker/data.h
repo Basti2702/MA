@@ -13,6 +13,7 @@
 #define NUMBER_LASERRAYS 581
 #define MEASUREPATH "./Laserdata/LaserMessung"
 #define CARINTERVAL 0
+#define TIMESTAMP 0.04 //40ms -> 25hz
 
 typedef struct laserdata_raw{
 	double angle;
