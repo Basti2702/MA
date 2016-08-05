@@ -67,7 +67,7 @@ int main()
 	pc.update(pc2.stateVector);
 	std::cout << "NewState: X: " << pc2.stateVector.get(0,0) << " Y: " << pc2.stateVector.get(1,0) << " Theta: " << pc2.stateVector.get(2,0) << " Vel: " << pc2.stateVector.get(3,0) << " Phi: " << pc2.stateVector.get(4,0) << std::endl;
 	std::cout << "StateVec after Update X: " << pc.stateVector.get(0,0) << " Y: " << pc.stateVector.get(1,0) << " Theta: " << pc.stateVector.get(2,0) << " Vel: " << pc.stateVector.get(3,0) << " Phi: " << pc.stateVector.get(4,0) << std::endl;
-	std::vector<PC> vehicles;
+	std::vector<PointCell> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::string number = getNextMeasureAsString(i);

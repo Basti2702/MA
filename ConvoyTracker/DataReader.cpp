@@ -108,7 +108,7 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-std::vector<PC> DataReader::processLaserData(std::string number)
+std::vector<PointCell> DataReader::processLaserData(std::string number)
 {
 	laserdata_raw data[NUMBER_LASERRAYS];
 	laserdata_raw currentMeasure;
@@ -163,7 +163,7 @@ std::vector<PC> DataReader::processLaserData(std::string number)
 	std::cout << "Start PointCloud Visualization" << std::endl;
 	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
 	std::cout << "End PointCloud Visualization" << std::endl;
-	std::vector<PC> vehicles = computeVehicleState(transformedData, number);
+	std::vector<PointCell> vehicles = computeVehicleState(transformedData, number);
 
 	return vehicles;
 }
@@ -235,9 +235,9 @@ std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw
 	return transformedData;
 }
 
-std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> segments, std::string number)
+std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_segment> segments, std::string number)
 {
-	std::vector<PC> vehicles;
+	std::vector<PointCell> vehicles;
 
 
 	cartesian_segment currentSegment;
@@ -262,7 +262,8 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 		}*/
 
 		//we have three different points, compute bounds
-		PC vehicle;
+		PointCell vehicle;
+		int left = 0;
 		//right point - left point
 		double width = fabs(relevantPoints[2].y - relevantPoints[0].y);
 		double length = fabs(relevantPoints[2].x - relevantPoints[0].x);
@@ -310,18 +311,19 @@ std::vector<PC> DataReader::computeVehicleState(std::vector<cartesian_segment> s
 			theta = thetaRight;
 			length = nearestLengthRight;
 			width = nearestWidthRight;
+			left = 1;
 		}
 		if(theta > 60 && width > 1)
 		{
 
-			vehicle.width = width;
-			vehicle.ID = ID;
-			vehicle.y = relevantPoints[0].y + width/2;
+			//vehicle.width = width;
+			vehicle.setID(ID);
+			vehicle.stateVector.put(1,0,relevantPoints[left].y + width/2); // y
 			//vehicle.x = relevantPoints[0].x;
 			//vehicle.vx = own speed +- depending on x
 			//vehicle.vy = own speed +-
-			vehicle.theta = theta;
-			vehicle.x = relevantPoints[1].x;//middle x of Interval
+			vehicle.stateVector.put(2,0,theta*M_PI / 180.0); //theta
+			vehicle.stateVector.put(0,0, relevantPoints[left].x + length/2);//x
 			vehicles.push_back(vehicle);
 			toPlot.push_back(relevantPoints);
 		}

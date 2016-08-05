@@ -111,7 +111,7 @@ void IntervalMap::shiftStructure(double xMotion) {
 			for(int k = 0; k<inorderPC(intvl->tracks,0); k++)
 			{
 				pcNode* pc = getPCfromInterval(j, k);
-				pc->vehicle.x -= 1;
+				pc->vehicle.stateVector.put(0,0, pc->vehicle.stateVector.get(0,0) -1 );
 			}
 
 		}
@@ -127,50 +127,54 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 	//map for temporary storage of PC that should be moved one interval up
 	std::vector<pcNode*> prevUp;
 	std::vector<pcNode*> curUp;
+	double angleInRadians = angle * M_PI / 180;
 	//1.Step correct directions of stored PCs
 	for (int j = 0; j < numberOfIntervals; j++) {
-
 		node* intvl = getInterval(map, j);
 		for (int i = 0; i < inorderPC(intvl->tracks,0); i++)
 		{
-			PC vehicle;
+			PointCell vehicle;
 			pcNode* pc = getPCfromInterval(j, i);
 			//delete PC from tree , because key value changes
 			//if PC stays within this interval, we will add it later again to ensure we still have an orderd tree
 			deletePC(intvl->tracks, pc->vehicle, j);
 			vehicle = pc->vehicle;
 			//change values directly
-			vehicle.y = vehicle.y - yMotion;
-			vehicle.theta -= angle;
+			vehicle.stateVector.put(1,0,vehicle.stateVector.get(1,0) - yMotion);
+			vehicle.stateVector.put(2,0,vehicle.stateVector.get(2,0) - angleInRadians);
 
 			//2. compensate rotation
 			double xAbs = (j - CARINTERVAL + 0.5) * intervalLength
 					- xSubInterval;
-			double yAbs = vehicle.y;
+			double yAbs = vehicle.stateVector.get(1,0);
 
-			double angleInRadians = angle * M_PI / 180;
+
 			double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
 					{ sin(angleInRadians), cos(angleInRadians) } };
 			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
 			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
-			vehicle.y -= yAbs;
+		//	vehicle.y -= yAbs;
+			vehicle.stateVector.put(1,0,vehicle.stateVector.get(1,0) - yAbs);
 			if (xAbs > 0.5 * intervalLength) {
 				//move one intervall up
-				vehicle.x += 1;
+			//	vehicle.x += 1;
+				vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) + 1);
 				curUp.push_back(pc);
 			} else if (xAbs < -0.5 * intervalLength) {
 				//move one intervall down;
 				if(j > 0)
 				{
-					vehicle.x -= 1;
+			//		vehicle.x -= 1;
+					vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) - 1);
 					insertPCintoInterval(j-1, vehicle);
 				}
 		//		deletePC(intvl->tracks, pc->vehicle, j);
 			}
 			else
 			{
-				vehicle.x -= xAbs;
+				//vehicle.x -= xAbs;
+				vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) - xAbs);
 				//add vehicle to current interval again
 				insertPC(intvl->tracks, vehicle);
 			}
@@ -263,7 +267,7 @@ void IntervalMap::inorder(node* tree) {
 	}
 }
 
-void IntervalMap::insertPCintoInterval(int interval, PC vehicle) {
+void IntervalMap::insertPCintoInterval(int interval, PointCell vehicle) {
 	node* intvl = getInterval(map, interval);
 	if (intvl == NULL) {
 		std::cerr << "COULD NOT FIND INTERVALL!!" << std::endl;
@@ -272,7 +276,7 @@ void IntervalMap::insertPCintoInterval(int interval, PC vehicle) {
 		insertPC(intvl->tracks, vehicle);
 	} else {
 		intvl->tracks = new pcNode;
-		intvl->tracks->y = vehicle.y;
+		intvl->tracks->y = vehicle.stateVector.get(1,0);
 		intvl->tracks->vehicle = vehicle;
 		intvl->tracks->left = NULL;
 		intvl->tracks->right = NULL;
@@ -283,9 +287,9 @@ void IntervalMap::insertPCintoInterval(int interval, PC vehicle) {
 /**
  * inserts the PC @param vehicle into the treeNode @param leaf
  */
-void IntervalMap::insertPC(pcNode* leaf, PC vehicle) {
+void IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
 
-	double key = vehicle.y;
+	double key = vehicle.stateVector.get(1,0);
 	if (key < leaf->y) {
 		if (leaf->left != NULL) {
 			insertPC(leaf->left, vehicle);
@@ -343,7 +347,7 @@ int IntervalMap::inorderPC(pcNode* root, int print) {
 	}
 	return count;
 }
-void IntervalMap::deletePCfromInterval(int interval, PC vehicle) {
+void IntervalMap::deletePCfromInterval(int interval, PointCell vehicle) {
 	node* intvl = getInterval(map, interval);
 	if (intvl->tracks == NULL) {
 		std::cerr
@@ -355,8 +359,8 @@ void IntervalMap::deletePCfromInterval(int interval, PC vehicle) {
 	}
 }
 
-void IntervalMap::deletePC(pcNode* leaf, PC vehicle, int interval) {
-	double key = vehicle.y;
+void IntervalMap::deletePC(pcNode* leaf, PointCell vehicle, int interval) {
+	double key = vehicle.stateVector.get(1,0);
 	if (leaf->y == key) {
 		remove(leaf, interval);
 	} else if (key < leaf->y) {

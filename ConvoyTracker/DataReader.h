@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
-
+#include "PointCell.h"
 
 
 class DataReader {
@@ -26,7 +26,7 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
-	std::vector<PC> processLaserData(std::string number);
+	std::vector<PointCell> processLaserData(std::string number);
 
 private:
 	DataVisualizer visualizer;
@@ -36,7 +36,7 @@ private:
 	int getLaserData(laserdata_raw_array data, std::string number);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
-	std::vector<PC> computeVehicleState(std::vector<cartesian_segment> segments, std::string number);
+	std::vector<PointCell> computeVehicleState(std::vector<cartesian_segment> segments, std::string number);
 	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
 	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };

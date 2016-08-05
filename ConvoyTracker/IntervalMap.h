@@ -13,6 +13,7 @@
 #include <math.h>
 #include <list>
 #include "data.h"
+#include "PointCell.h"
 
 #define NUMBER_OF_INTERVALS 100
 #define INTERVALL_LENGTH 1 //unit m
@@ -21,7 +22,7 @@
 struct pcNode
 {
 	double y;
-	PC vehicle;
+	PointCell vehicle;
 	pcNode *left;
 	pcNode *right;
 	pcNode *parent;
@@ -45,8 +46,8 @@ public:
 
 	void shiftStructure(double xMotion);
 	void rotateStructure(double angle, double yMotion);
-	void insertPCintoInterval(int interval, PC vehicle);
-	void deletePCfromInterval(int interval, PC vehicle);
+	void insertPCintoInterval(int interval, PointCell vehicle);
+	void deletePCfromInterval(int interval, PointCell vehicle);
 	int inorderTracks(int interval);
 
 private:
@@ -55,8 +56,8 @@ private:
 	void insertInterval(node* leaf, double key);
 	void destroy_tree(node* leaf);
 	void destroy_PCTree(pcNode* root);
-	void insertPC(pcNode* leaf, PC vehicle);
-	void deletePC(pcNode* leaf,PC vehicle, int interval);
+	void insertPC(pcNode* leaf, PointCell vehicle);
+	void deletePC(pcNode* leaf,PointCell vehicle, int interval);
 	node* getInterval(node *leaf, double Intervall);
 	pcNode* getPC(pcNode* leaf, int index, int& count);
 	pcNode* getPCfromInterval(int interval, int index);
