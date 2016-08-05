@@ -39,6 +39,7 @@ private:
 	Matrix<double> H; //covariance of new measurement
 	Matrix<double> R; //measurement noise, in our case the same as process noise
 	Matrix<double> K;
+	Matrix<double> stateCopy;
 	IdentityMatrix<double> I;
 
 	int ID;

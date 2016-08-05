@@ -14,6 +14,7 @@
 #include "data.h"
 #include "IntervalMap.h"
 #include "PGMReader.h"
+#include "PointCell.h"
 
 #define NUM_MEASUREMENT 10
 //1242

@@ -50,18 +50,23 @@ int main()
 	}*/
 	DataReader reader;
 	IntervalMap intervalMap;
-	PC test, test2, test3;
-	int size;
-	test.y = 0;
-	test.x = 5.5;
-	test2.y = 0;
-	test2.x = 5.5;
-	test2.theta = 45;
-	test2.ID = 42;
-	test3.y = -5;
-	test3.x = 5.5;
-	intervalMap.insertPCintoInterval(5, test);
-	intervalMap.rotateStructure(45,0);
+	PointCell pc;
+	pc.stateVector.put(0,0, 10);
+	pc.stateVector.put(1,0, 0);
+	pc.stateVector.put(2,0, 45*M_PI / 180.0);
+	pc.stateVector.put(3,0, 33.33);
+	pc.stateVector.put(4,0, 0);
+	pc.predict();
+	std::cout << "X: " << pc.stateVector.get(0,0) << " Y: " << pc.stateVector.get(1,0) << " Theta: " << pc.stateVector.get(2,0) << " Vel: " << pc.stateVector.get(3,0) << " Phi: " << pc.stateVector.get(4,0) << std::endl;
+	PointCell pc2;
+	pc2.stateVector.put(0,0, 11.5);
+	pc2.stateVector.put(1,0, 1.2);
+	pc2.stateVector.put(2,0, 48*M_PI / 180.0);
+	pc2.stateVector.put(3,0, 33.33);
+	pc2.stateVector.put(4,0, 0);
+	pc.update(pc2.stateVector);
+	std::cout << "NewState: X: " << pc2.stateVector.get(0,0) << " Y: " << pc2.stateVector.get(1,0) << " Theta: " << pc2.stateVector.get(2,0) << " Vel: " << pc2.stateVector.get(3,0) << " Phi: " << pc2.stateVector.get(4,0) << std::endl;
+	std::cout << "StateVec after Update X: " << pc.stateVector.get(0,0) << " Y: " << pc.stateVector.get(1,0) << " Theta: " << pc.stateVector.get(2,0) << " Vel: " << pc.stateVector.get(3,0) << " Phi: " << pc.stateVector.get(4,0) << std::endl;
 	std::vector<PC> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{

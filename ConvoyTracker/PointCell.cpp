@@ -16,7 +16,7 @@ PointCell::PointCell()
 	//values for position is trusted more than value for orientation and even more than
 	P.put(0,0, 2); //x
 	P.put(1,1, 2); //y
-	P.put(2,2, 5); //theta
+	P.put(2,2, 10); //theta
 	P.put(3,3, 10);//v
 	P.put(4,4, 10);//phi
 
@@ -49,6 +49,7 @@ PointCell::~PointCell() {
  */
 void PointCell::predict()
 {
+	stateCopy = stateVector;
 	computeF(stateVector);
 	computeCovarianceF(stateVector, F);
 	P = F*P*F.getTranspose() + Q;
@@ -60,17 +61,17 @@ void PointCell::update(Matrix<double> newState)
 {
 	double velocity, phi;
 	double xNew = newState.get(0,0);
-	double yNew = newState.get(0,1);
-	double thetaNew = newState.get(0,2);
+	double yNew = newState.get(1,0);
+	double thetaNew = newState.get(2,0);
 
-	double x = stateVector.get(0,0);
-	double y = stateVector.get(0,1);
-	double theta = stateVector.get(0,2);
+	double x = stateCopy.get(0,0);
+	double y = stateCopy.get(1,0);
+	double theta = stateCopy.get(2,0);
 	velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
 	phi = (thetaNew-theta) / TIMESTAMP;
 
-//	stateVector.put(3,0,velocity);
-//	stateVector.put(4,0,phi);
+	stateVector.put(3,0,velocity);
+	stateVector.put(4,0,phi);
 	newState.put(3,0,velocity);
 	newState.put(4,0,phi);
 
@@ -105,12 +106,22 @@ void PointCell::computeF(Matrix<double>& state)
 
 	double predictedX, predictedY, predictedTheta, predictedVel,predictedPhi;
 
-	predictedX = (velocity/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta)) + x;
-	predictedY = (velocity/phi) * (-cos(phi*TIMESTAMP + theta) + cos(theta)) + y;
-	predictedTheta = phi*TIMESTAMP + theta;
-	predictedVel = velocity;
-	predictedPhi = phi;
-
+	if(phi > 0.0001)
+	{
+		predictedX = (velocity/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta)) + x;
+		predictedY = (velocity/phi) * (-cos(phi*TIMESTAMP + theta) + cos(theta)) + y;
+		predictedTheta = phi*TIMESTAMP + theta;
+		predictedVel = velocity;
+		predictedPhi = phi;
+	}
+	else
+	{
+		predictedX = x + velocity * TIMESTAMP * cos(theta);
+		predictedY = y + velocity * TIMESTAMP * sin(theta);
+		predictedTheta = theta;
+		predictedVel = velocity;
+		predictedPhi = 0.00001;
+	}
 	state.put(0,0, predictedX);
 	state.put(1,0, predictedY);
 	state.put(2,0, predictedTheta);
@@ -131,7 +142,7 @@ void PointCell::computeCovarianceF(Matrix<double> state, Matrix<double>& F)
 
 	f22 = (velocity/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta));
 	f23 = (1/phi) * (-cos(phi*TIMESTAMP + theta) + cos(theta));
-	f24 = (((TIMESTAMP*velocity)/phi) * sin(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (-cos(phi*TIMESTAMP + theta) - cos(theta)));
+	f24 = (((TIMESTAMP*velocity)/phi) * sin(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (-cos(phi*TIMESTAMP + theta) + cos(theta)));
 
 	F.put(0,2, f12);
 	F.put(0,3, f13);
