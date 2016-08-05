@@ -12,6 +12,7 @@
 
 #define NUMBER_LASERRAYS 581
 #define MEASUREPATH "./Laserdata/LaserMessung"
+#define EMLPATH "./Laserdata/EML"
 #define CARINTERVAL 0
 #define TIMESTAMP 0.04 //40ms -> 25hz
 

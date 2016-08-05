@@ -119,6 +119,9 @@ std::vector<PointCell> DataReader::processLaserData(std::string number)
 	//read new data from file
 	int numElements = getLaserData(data, number);
 
+	//read current EML from file
+	readEMLData(number);
+
 	oldMeasure = data[0];
 
 
@@ -317,13 +320,34 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 		{
 
 			//vehicle.width = width;
+			double y = relevantPoints[left].y + width/2;
 			vehicle.setID(ID);
-			vehicle.stateVector.put(1,0,relevantPoints[left].y + width/2); // y
-			//vehicle.x = relevantPoints[0].x;
-			//vehicle.vx = own speed +- depending on x
-			//vehicle.vy = own speed +-
-			vehicle.stateVector.put(2,0,theta*M_PI / 180.0); //theta
 			vehicle.stateVector.put(0,0, relevantPoints[left].x + length/2);//x
+			vehicle.stateVector.put(1,0,relevantPoints[left].y + width/2); // y
+			vehicle.stateVector.put(2,0,theta*M_PI / 180.0); //theta
+			//due to prior knowledge on highways, velocitys for diffrent lanes are estimated as below
+			if(y < -4.5)
+			{
+				vehicle.stateVector.put(3,0, currentSpeed + 11.11); //velocity + 40kmh
+			}
+			else if(y < -1.5)
+			{
+				vehicle.stateVector.put(3,0, currentSpeed + 5.55); //velocity + 20kmh
+			}
+			else if(y > 4.5)
+			{
+				vehicle.stateVector.put(3,0, currentSpeed - 11.11); //velocity - 40kmh
+			}
+			else if(y > 1.5)
+			{
+				vehicle.stateVector.put(3,0, currentSpeed + 5.55); //velocity - 20kmh
+			}
+			else
+			{
+				vehicle.stateVector.put(3,0, currentSpeed); //velocity
+			}
+			vehicle.stateVector.put(4,0, currentYawRate); //yaw rate
+
 			vehicles.push_back(vehicle);
 			toPlot.push_back(relevantPoints);
 		}
@@ -362,4 +386,44 @@ std::vector<laserdata_cartesian> DataReader::getRelevantMeasuresFromSegment(cart
 	relevantMeasures.push_back(segment.measures.at(segment.numberOfMeasures-1));
 
 	return relevantMeasures;
+}
+
+/**
+ * Stores current Speed and yaw rate from file to class variables
+ */
+void DataReader::readEMLData(std::string number)
+{
+	std::ostringstream measurePath;
+	measurePath << EMLPATH << number << ".txt";
+	std::cout << measurePath.str() << std::endl;
+    std::ifstream input(measurePath.str().c_str());
+    std::string line;
+    std::string segment;
+
+    if(std::getline( input, line ))
+    {
+    	std::stringstream ss;
+
+    	ss << line;
+
+    	int dataCnt = 1;
+
+    	while(std::getline(ss, segment, ' '))
+    	{
+    		if(dataCnt == 1)
+    		{
+    			//First value in file corresponds to current velocity in kmh
+    			//Compute value in m/s
+    			currentSpeed = atof(segment.c_str()) / 3.6;
+    			++dataCnt;
+    		}
+    		else
+    		{
+    			//second value corresponds to yaw rate in °/s
+    			//Compute value in rad/s
+    			currentYawRate = atof(segment.c_str()) * M_PI / 180.0;
+    			break;
+    		}
+    	}
+    }
 }

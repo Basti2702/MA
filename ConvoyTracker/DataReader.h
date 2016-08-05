@@ -31,8 +31,10 @@ public:
 private:
 	DataVisualizer visualizer;
 	int ID;
+	double currentSpeed;
+	double currentYawRate;
 
-
+	void readEMLData(std::string number);
 	int getLaserData(laserdata_raw_array data, std::string number);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
