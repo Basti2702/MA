@@ -26,7 +26,7 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
-	std::vector<PointCell> processLaserData(std::string number);
+	std::vector<PointCell> processLaserData(std::string number, double currentSpeed, double currentYawRate);
 
 private:
 	DataVisualizer visualizer;

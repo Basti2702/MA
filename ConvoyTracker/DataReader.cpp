@@ -108,7 +108,7 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-std::vector<PointCell> DataReader::processLaserData(std::string number)
+std::vector<PointCell> DataReader::processLaserData(std::string number, double currentSpeed, double currentYawRate)
 {
 	laserdata_raw data[NUMBER_LASERRAYS];
 	laserdata_raw currentMeasure;
@@ -116,11 +116,12 @@ std::vector<PointCell> DataReader::processLaserData(std::string number)
 	std::vector<raw_segment> segments;
 	raw_segment currentSegment;
 
+
+	this->currentSpeed = currentSpeed;
+	this->currentYawRate = currentYawRate;
+
 	//read new data from file
 	int numElements = getLaserData(data, number);
-
-	//read current EML from file
-	readEMLData(number);
 
 	oldMeasure = data[0];
 
@@ -388,42 +389,4 @@ std::vector<laserdata_cartesian> DataReader::getRelevantMeasuresFromSegment(cart
 	return relevantMeasures;
 }
 
-/**
- * Stores current Speed and yaw rate from file to class variables
- */
-void DataReader::readEMLData(std::string number)
-{
-	std::ostringstream measurePath;
-	measurePath << EMLPATH << number << ".txt";
-	std::cout << measurePath.str() << std::endl;
-    std::ifstream input(measurePath.str().c_str());
-    std::string line;
-    std::string segment;
 
-    if(std::getline( input, line ))
-    {
-    	std::stringstream ss;
-
-    	ss << line;
-
-    	int dataCnt = 1;
-
-    	while(std::getline(ss, segment, ' '))
-    	{
-    		if(dataCnt == 1)
-    		{
-    			//First value in file corresponds to current velocity in kmh
-    			//Compute value in m/s
-    			currentSpeed = atof(segment.c_str()) / 3.6;
-    			++dataCnt;
-    		}
-    		else
-    		{
-    			//second value corresponds to yaw rate in °/s
-    			//Compute value in rad/s
-    			currentYawRate = atof(segment.c_str()) * M_PI / 180.0;
-    			break;
-    		}
-    	}
-    }
-}

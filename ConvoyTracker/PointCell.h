@@ -22,6 +22,17 @@ public:
 	void setID();
 	int getID();
 	void setID(int id);
+	double getX();
+	double getY();
+	double getTheta();
+	double getVelocity();
+	double getPhi();
+
+	void setX(double x);
+	void setY(double y);
+	void setTheta(double theta);
+	void setVelocity(double velocity);
+	void setPhi(double phi);
 private:
 
 	//necessary matrices and functions for kalman filtering

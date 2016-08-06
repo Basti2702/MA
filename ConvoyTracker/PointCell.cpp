@@ -44,6 +44,49 @@ PointCell::PointCell()
 PointCell::~PointCell() {
 	// TODO Auto-generated destructor stub
 }
+
+double PointCell::getX()
+{
+	return stateVector.get(0,0);
+}
+double PointCell::getY()
+{
+	return stateVector.get(1,0);
+}
+double PointCell::getTheta()
+{
+	return stateVector.get(2,0);
+}
+double PointCell::getVelocity()
+{
+	return stateVector.get(3,0);
+}
+double PointCell::getPhi()
+{
+	return stateVector.get(4,0);
+}
+
+void PointCell::setX(double x)
+{
+	stateVector.put(0,0, x);
+}
+void PointCell::setY(double y)
+{
+	stateVector.put(0,0, y);
+}
+void PointCell::setTheta(double theta)
+{
+	stateVector.put(0,0, theta);
+}
+void PointCell::setVelocity(double velocity)
+{
+	stateVector.put(0,0, velocity);
+}
+void PointCell::setPhi(double phi)
+{
+	stateVector.put(0,0, phi);
+}
+
 /**
  * Performs the kalman filter prediction step
  */

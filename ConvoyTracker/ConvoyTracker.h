@@ -17,11 +17,23 @@
 #include "PointCell.h"
 
 #define NUM_MEASUREMENT 10
+#define ASSOCIATION_THRESHOLD 3.5
 //1242
 class ConvoyTracker {
 public:
 	ConvoyTracker();
 	virtual ~ConvoyTracker();
+
+	DataReader reader;
+	IntervalMap intervalMap;
+
+	double currentSpeed;
+	double currentYawRate;
+
+	void readEMLData(std::string number);
+	void associateAndUpdate(std::vector<PointCell> vehicles, std::vector<pcNode*> trackedVehicles);
+private:
+
 };
 
 #endif /* CONVOYTRACKER_H_ */

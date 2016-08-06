@@ -49,6 +49,11 @@ public:
 	void insertPCintoInterval(int interval, PointCell vehicle);
 	void deletePCfromInterval(int interval, PointCell vehicle);
 	int inorderTracks(int interval);
+	node* at(int interval);
+	int inorderPC(pcNode* root, int print);
+	pcNode* getPCfromInterval(int interval, int index);
+	void insertNewTrack(PointCell vehicle);
+	void remove(pcNode*node, int interval);
 
 private:
 	void allocateIntervalMap();
@@ -60,7 +65,7 @@ private:
 	void deletePC(pcNode* leaf,PointCell vehicle, int interval);
 	node* getInterval(node *leaf, double Intervall);
 	pcNode* getPC(pcNode* leaf, int index, int& count);
-	pcNode* getPCfromInterval(int interval, int index);
+
 
 	void swap_near_nodes(pcNode*child, pcNode*parent, int interval);
 	void swap_far_nodes(pcNode*a, pcNode*b, int interval);
@@ -69,12 +74,12 @@ private:
 	bool is_right_child(const pcNode*node);
 	pcNode* get_max(pcNode*node);
 	pcNode* get_prev_node(pcNode*now);
-	void remove(pcNode*node, int interval);
+
 	pcNode** get_parent_ptr(pcNode*_node, int interval);
 
 
 	void inorder(node* tree);
-	int inorderPC(pcNode* root, int print);
+
 
 	int numberOfIntervals;
 	int intervalLength;

@@ -179,14 +179,14 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 				insertPC(intvl->tracks, vehicle);
 			}
 		}
-		for(int i = 0; i < prevUp.size(); i++)
+		for(uint i = 0; i < prevUp.size(); i++)
 		{
 			pcNode* tmp = prevUp.at(i);
 			insertPCintoInterval(j, tmp->vehicle);
 		}
 		prevUp.clear();
 		prevUp = curUp;
-		int s = curUp.size();
+		uint s = curUp.size();
 		curUp.clear();
 		if(prevUp.size() != s)
 		{
@@ -552,4 +552,25 @@ pcNode* IntervalMap::getPC(pcNode* leaf, int index, int& count)
 		}
 	}
 	return NULL;
+}
+
+node* IntervalMap::at(int interval)
+{
+	return getInterval(map, interval);
+}
+
+void IntervalMap::insertNewTrack(PointCell vehicle)
+{
+	double x = vehicle.stateVector.get(0,0);
+	int interval = (int) x;
+	interval += CARINTERVAL;
+
+	if(interval > 99)
+	{
+		return;
+	}
+
+	vehicle.stateVector.put(0,0, ((double) interval)+0.5);
+
+	insertPCintoInterval(interval, vehicle);
 }
