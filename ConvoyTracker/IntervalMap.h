@@ -46,13 +46,14 @@ public:
 
 	void shiftStructure(double xMotion);
 	void rotateStructure(double angle, double yMotion);
-	void insertPCintoInterval(int interval, PointCell vehicle);
+	pcNode* insertPCintoInterval(int interval, PointCell vehicle);
 	void deletePCfromInterval(int interval, PointCell vehicle);
 	int inorderTracks(int interval);
 	node* at(int interval);
 	int inorderPC(pcNode* root, int print);
 	pcNode* getPCfromInterval(int interval, int index);
-	void insertNewTrack(PointCell vehicle);
+	pcNode* insertNewTrack(PointCell vehicle);
+	void removeVehicle(pcNode* node);
 	void remove(pcNode*node, int interval);
 
 private:
@@ -61,7 +62,7 @@ private:
 	void insertInterval(node* leaf, double key);
 	void destroy_tree(node* leaf);
 	void destroy_PCTree(pcNode* root);
-	void insertPC(pcNode* leaf, PointCell vehicle);
+	pcNode* insertPC(pcNode* leaf, PointCell vehicle);
 	void deletePC(pcNode* leaf,PointCell vehicle, int interval);
 	node* getInterval(node *leaf, double Intervall);
 	pcNode* getPC(pcNode* leaf, int index, int& count);

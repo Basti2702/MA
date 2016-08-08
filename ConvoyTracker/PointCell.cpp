@@ -72,19 +72,19 @@ void PointCell::setX(double x)
 }
 void PointCell::setY(double y)
 {
-	stateVector.put(0,0, y);
+	stateVector.put(1,0, y);
 }
 void PointCell::setTheta(double theta)
 {
-	stateVector.put(0,0, theta);
+	stateVector.put(2,0, theta);
 }
 void PointCell::setVelocity(double velocity)
 {
-	stateVector.put(0,0, velocity);
+	stateVector.put(3,0, velocity);
 }
 void PointCell::setPhi(double phi)
 {
-	stateVector.put(0,0, phi);
+	stateVector.put(4,0, phi);
 }
 
 /**

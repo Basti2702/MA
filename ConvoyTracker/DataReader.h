@@ -30,7 +30,6 @@ public:
 
 private:
 	DataVisualizer visualizer;
-	int ID;
 	double currentSpeed;
 	double currentYawRate;
 

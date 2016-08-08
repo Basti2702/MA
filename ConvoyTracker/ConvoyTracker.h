@@ -16,7 +16,7 @@
 #include "PGMReader.h"
 #include "PointCell.h"
 
-#define NUM_MEASUREMENT 10
+#define NUM_MEASUREMENT 2
 #define ASSOCIATION_THRESHOLD 3.5
 //1242
 class ConvoyTracker {
@@ -27,13 +27,36 @@ public:
 	DataReader reader;
 	IntervalMap intervalMap;
 
-	double currentSpeed;
-	double currentYawRate;
+
 
 	void readEMLData(std::string number);
 	void associateAndUpdate(std::vector<PointCell> vehicles, std::vector<pcNode*> trackedVehicles);
-private:
+	double getCurrentSpeed() const;
+	void setCurrentSpeed(double currentSpeed);
+	double getCurrentYawRate() const;
+	void setCurrentYawRate(double currentYawRate);
+	double getX() const;
+	void setX(double x);
+	double getYOld() const;
+	void setYOld(double old);
+	double getY() const;
+	void setY(double y);
+	double getYaw() const;
+	void setYaw(double yaw);
+	double getYawOld() const;
+	void setYawOld(double yawOld);
+	double getXOld() const;
+	void setXOld(double old);
 
+private:
+	int ID;
+
+	double currentSpeed;
+	double currentYawRate;
+
+	double x, xOld;
+	double y, yOld;
+	double yaw, yawOld;
 };
 
 #endif /* CONVOYTRACKER_H_ */

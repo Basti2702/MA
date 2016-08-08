@@ -10,7 +10,6 @@
 
 DataReader::DataReader() {
 	// TODO Auto-generated constructor stub
-	ID = 0;
 }
 
 DataReader::~DataReader() {
@@ -189,7 +188,7 @@ double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 {
 	//https://www.researchgate.net/publication/243773062_Model_Based_Object_Classification_and_Tracking_in_Traffic_Scenes_from_Range_Images
 	double C0 = 1.0;
-	double C1, C2;
+	double C1;
 	double min_distance = p2.distance;
 
 	double deltaAlpha;
@@ -304,11 +303,13 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 			std::cout << "Width: " << width << std::endl;*/
 
 		//the detected car probably is defined with the points that form the biggest angle and are wider than 1m
+		int points = 0;
 		if(thetaLeft + 5 > theta && nearestWidthLeft > 1)
 		{
 			theta = thetaLeft;
 			length = nearestLengthLeft;
 			width = nearestWidthLeft;
+			points = 1;
 		}
 		if(thetaRight + 5 > theta && nearestWidthRight > 1)
 		{
@@ -316,15 +317,32 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 			length = nearestLengthRight;
 			width = nearestWidthRight;
 			left = 1;
+			points = 2;
 		}
 		if(theta > 60 && width > 1)
 		{
 
 			//vehicle.width = width;
 			double y = relevantPoints[left].y + width/2;
-			vehicle.setID(ID);
 			vehicle.stateVector.put(0,0, relevantPoints[left].x + length/2);//x
 			vehicle.stateVector.put(1,0,relevantPoints[left].y + width/2); // y
+			//now compute theta regarding to movement direction
+			switch(points)
+			{
+			case 0:
+				width = (relevantPoints[2].y - relevantPoints[0].y);
+				length = (relevantPoints[2].x - relevantPoints[0].x);
+				break;
+			case 1:
+				length = (relevantPoints[1].x - relevantPoints[0].x);
+				width = (relevantPoints[1].y - relevantPoints[0].y);
+				break;
+			case 2:
+				length = (relevantPoints[1].x - relevantPoints[2].x);
+				width = (relevantPoints[1].y - relevantPoints[2].y);
+				break;
+			}
+			theta = atan(width/length);
 			vehicle.stateVector.put(2,0,theta*M_PI / 180.0); //theta
 			//due to prior knowledge on highways, velocitys for diffrent lanes are estimated as below
 			if(y < -4.5)
@@ -341,13 +359,14 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 			}
 			else if(y > 1.5)
 			{
-				vehicle.stateVector.put(3,0, currentSpeed + 5.55); //velocity - 20kmh
+				vehicle.stateVector.put(3,0, currentSpeed - 5.55); //velocity - 20kmh
 			}
 			else
 			{
 				vehicle.stateVector.put(3,0, currentSpeed); //velocity
 			}
-			vehicle.stateVector.put(4,0, currentYawRate); //yaw rate
+			vehicle.setVelocity(currentSpeed + 11.11);
+			vehicle.setPhi(currentYawRate); //yaw rate
 
 			vehicles.push_back(vehicle);
 			toPlot.push_back(relevantPoints);

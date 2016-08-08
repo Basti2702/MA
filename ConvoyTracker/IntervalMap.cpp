@@ -137,11 +137,11 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 			pcNode* pc = getPCfromInterval(j, i);
 			//delete PC from tree , because key value changes
 			//if PC stays within this interval, we will add it later again to ensure we still have an orderd tree
-			deletePC(intvl->tracks, pc->vehicle, j);
 			vehicle = pc->vehicle;
+			deletePC(intvl->tracks, pc->vehicle, j);
 			//change values directly
-			vehicle.stateVector.put(1,0,vehicle.stateVector.get(1,0) - yMotion);
-			vehicle.stateVector.put(2,0,vehicle.stateVector.get(2,0) - angleInRadians);
+			vehicle.setY(vehicle.getY() - yMotion);
+			vehicle.setTheta(vehicle.getTheta() - angleInRadians);
 
 			//2. compensate rotation
 			double xAbs = (j - CARINTERVAL + 0.5) * intervalLength
@@ -155,18 +155,18 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
 		//	vehicle.y -= yAbs;
-			vehicle.stateVector.put(1,0,vehicle.stateVector.get(1,0) - yAbs);
+			vehicle.setY(vehicle.getY() - yAbs);
 			if (xAbs > 0.5 * intervalLength) {
 				//move one intervall up
 			//	vehicle.x += 1;
-				vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) + 1);
+				vehicle.setX(vehicle.getX() + 1);
 				curUp.push_back(pc);
 			} else if (xAbs < -0.5 * intervalLength) {
 				//move one intervall down;
 				if(j > 0)
 				{
 			//		vehicle.x -= 1;
-					vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) - 1);
+					vehicle.setX(vehicle.getX() - 1);
 					insertPCintoInterval(j-1, vehicle);
 				}
 		//		deletePC(intvl->tracks, pc->vehicle, j);
@@ -174,9 +174,9 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 			else
 			{
 				//vehicle.x -= xAbs;
-				vehicle.stateVector.put(0,0,vehicle.stateVector.get(0,0) - xAbs);
+				vehicle.setX(vehicle.getX() - xAbs);
 				//add vehicle to current interval again
-				insertPC(intvl->tracks, vehicle);
+				insertPCintoInterval(j, vehicle);
 			}
 		}
 		for(uint i = 0; i < prevUp.size(); i++)
@@ -267,13 +267,13 @@ void IntervalMap::inorder(node* tree) {
 	}
 }
 
-void IntervalMap::insertPCintoInterval(int interval, PointCell vehicle) {
+pcNode* IntervalMap::insertPCintoInterval(int interval, PointCell vehicle) {
 	node* intvl = getInterval(map, interval);
 	if (intvl == NULL) {
 		std::cerr << "COULD NOT FIND INTERVALL!!" << std::endl;
 	}
 	if (intvl->tracks != NULL) {
-		insertPC(intvl->tracks, vehicle);
+		return insertPC(intvl->tracks, vehicle);
 	} else {
 		intvl->tracks = new pcNode;
 		intvl->tracks->y = vehicle.stateVector.get(1,0);
@@ -281,18 +281,19 @@ void IntervalMap::insertPCintoInterval(int interval, PointCell vehicle) {
 		intvl->tracks->left = NULL;
 		intvl->tracks->right = NULL;
 		intvl->tracks->parent = NULL;
+		return intvl->tracks;
 	}
 }
 
 /**
  * inserts the PC @param vehicle into the treeNode @param leaf
  */
-void IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
+pcNode* IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
 
 	double key = vehicle.stateVector.get(1,0);
 	if (key < leaf->y) {
 		if (leaf->left != NULL) {
-			insertPC(leaf->left, vehicle);
+			return insertPC(leaf->left, vehicle);
 		} else {
 			leaf->left = new pcNode;
 			leaf->left->y = key;
@@ -300,11 +301,12 @@ void IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
 			leaf->left->left = NULL;
 			leaf->left->right = NULL;
 			leaf->left->parent = leaf;
+			return leaf->left;
 		}
 
 	} else if (key > leaf->y) {
 		if (leaf->right != NULL) {
-			insertPC(leaf->right, vehicle);
+			return insertPC(leaf->right, vehicle);
 		} else {
 			leaf->right = new pcNode;
 			leaf->right->y = key;
@@ -312,12 +314,13 @@ void IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
 			leaf->right->left = NULL;
 			leaf->right->right = NULL;
 			leaf->right->parent = leaf;
+			return leaf->right;
 		}
 	} else {
 		//should never happen
 		std::cerr << "ERROR WHILE INSERTING NEW PC: VALUE ALREADY IN LIST!!"
 				<< std::endl;
-		return;
+		return NULL;
 	}
 }
 
@@ -559,9 +562,25 @@ node* IntervalMap::at(int interval)
 	return getInterval(map, interval);
 }
 
-void IntervalMap::insertNewTrack(PointCell vehicle)
+pcNode* IntervalMap::insertNewTrack(PointCell vehicle)
 {
-	double x = vehicle.stateVector.get(0,0);
+	double x = vehicle.getX();
+	int interval = (int) x;
+	interval += CARINTERVAL;
+
+	if(interval > 99)
+	{
+		return NULL;
+	}
+
+	vehicle.setX(((double) interval)+0.5);
+
+	return insertPCintoInterval(interval, vehicle);
+}
+
+void IntervalMap::removeVehicle(pcNode* node)
+{
+	double x = node->vehicle.getX();
 	int interval = (int) x;
 	interval += CARINTERVAL;
 
@@ -570,7 +589,5 @@ void IntervalMap::insertNewTrack(PointCell vehicle)
 		return;
 	}
 
-	vehicle.stateVector.put(0,0, ((double) interval)+0.5);
-
-	insertPCintoInterval(interval, vehicle);
+	remove(node,interval);
 }
