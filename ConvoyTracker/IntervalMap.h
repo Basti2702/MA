@@ -55,6 +55,8 @@ public:
 	pcNode* insertNewTrack(PointCell vehicle);
 	void removeVehicle(pcNode* node);
 	void remove(pcNode*node, int interval);
+	pcNode* insertPC(pcNode* leaf, PointCell vehicle);
+	pcNode* getPC(pcNode* leaf, int index, int& count);
 
 private:
 	void allocateIntervalMap();
@@ -62,11 +64,9 @@ private:
 	void insertInterval(node* leaf, double key);
 	void destroy_tree(node* leaf);
 	void destroy_PCTree(pcNode* root);
-	pcNode* insertPC(pcNode* leaf, PointCell vehicle);
+
 	void deletePC(pcNode* leaf,PointCell vehicle, int interval);
 	node* getInterval(node *leaf, double Intervall);
-	pcNode* getPC(pcNode* leaf, int index, int& count);
-
 
 	void swap_near_nodes(pcNode*child, pcNode*parent, int interval);
 	void swap_far_nodes(pcNode*a, pcNode*b, int interval);

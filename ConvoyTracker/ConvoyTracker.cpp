@@ -19,6 +19,7 @@ ConvoyTracker::ConvoyTracker() {
 	yOld = 0;
 	yawOld = 0;
 	ID = 0;
+	convoyID = 0;
 }
 
 ConvoyTracker::~ConvoyTracker() {
@@ -164,6 +165,9 @@ int main()
 		}
 		//3. Associate and Update
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
+
+		//4. find/update Convoytracks
+
 	}
 	return 0;
 }
@@ -338,19 +342,32 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 			++ID;
 			vehicles.at(i).setID(ID);
 			intervalMap.insertNewTrack(vehicles.at(i));
+			std::vector<PointCell> newHist;
+			newHist.push_back(vehicles.at(i));
+			history.insert(std::pair<int, std::vector<PointCell> > (ID, newHist));
 			std::cout << "Added new Vehicle with ID " << ID << std::endl;
+
+//			findConvoy(vehicles.at(i));
 		}
 		else
 		{
 			pcNode* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			pcNode* update = trackedVehicles.at(minIndex);
-			int intvl = (int) update->vehicle.stateCopy.get(0,0);
+			int intvl = (int) update->vehicle.getX();
 			intvl += CARINTERVAL;
 			update->vehicle.update(vehicles.at(i).stateVector);
 			update->y = update->vehicle.getY();
 			PointCell pc = update->vehicle;
 			//TODO: move to correct interval if necessary
-			if(intervalMap.inorderTracks(intvl) == 1)
+			if(update->vehicle.getX() > intvl+1-CARINTERVAL || update->vehicle.getX() < intvl-CARINTERVAL)
+			{
+				//vehicle has to be moved
+				intervalMap.insertNewTrack(update->vehicle);
+				intervalMap.remove(update, intvl);
+			}
+
+
+			else if(intervalMap.inorderTracks(intvl) == 1)
 			{
 			}
 			else
@@ -377,7 +394,13 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
-			std::cout << "Updated vehicle with ID " << update->vehicle.getID() << std::endl;
+
+			//update history of given vehicle
+			history.at(pc.getID()).push_back(pc);
+
+			std::cout << "Updated vehicle with ID " << pc.getID() << std::endl;
+
+//			findConvoy(pc);
 		}
 	}
 
@@ -385,5 +408,69 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 	{
 		//delete all tracks that could not be matched
 		intervalMap.removeVehicle(trackedVehicles.at(k));
+	}
+}
+
+void ConvoyTracker::findConvoy(PointCell vehicle)
+{
+	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
+	{
+		if(it->first == vehicle.getID())
+		{
+			continue;
+		}
+
+		for(uint i = 0; i < it->second.size(); i++)
+		{
+			PointCell pc = it->second.at(i);
+			if(pc.getX() - 0.5 <= vehicle.getX() && vehicle.getX() <= pc.getX() + 0.5)
+			{
+				if(pc.getY() - 0.5 <= vehicle.getY() && vehicle.getY() <= pc.getY() + 0.5)
+				{
+					//current vehicle position matches with one from history -> add this pointcell to convoy
+					int id1 = pc.getID();
+					int id2 = vehicle.getID();
+					bool convoyFound = false;
+					for(uint j = 0; j < convoys.size(); j++)
+					{
+						std::vector<int>::iterator it1, it2;
+						Convoy currentConvoy = convoys.at(j);
+						it1 = std::find(currentConvoy.participatingVehicles.begin(), currentConvoy.participatingVehicles.end(), id1);
+						it2 = std::find(currentConvoy.participatingVehicles.begin(), currentConvoy.participatingVehicles.end(), id2);
+						if(it1 != currentConvoy.participatingVehicles.end() && it2 != currentConvoy.participatingVehicles.end())
+						{
+							//convoy already exists with both IDS
+							intervalMap.insertPC(currentConvoy.track, vehicle);
+							convoyFound = true;
+							break;
+						}
+						else if (it1 != currentConvoy.participatingVehicles.end())
+						{
+							intervalMap.insertPC(currentConvoy.track, vehicle);
+							currentConvoy.participatingVehicles.push_back(vehicle.getID());
+							convoyFound = true;
+							break;
+						}
+						else if (it2 != currentConvoy.participatingVehicles.end())
+						{
+							intervalMap.insertPC(currentConvoy.track, vehicle);
+							currentConvoy.participatingVehicles.push_back(pc.getID());
+							convoyFound = true;
+							break;
+						}
+					}
+
+					if(!convoyFound)
+					{
+						Convoy newConvoy;
+						newConvoy.ID = convoyID++;
+						newConvoy.participatingVehicles.push_back(pc.getID());
+						newConvoy.participatingVehicles.push_back(vehicle.getID());
+						intervalMap.insertPC(newConvoy.track, vehicle);
+					}
+					return;
+				}
+			}
+		}
 	}
 }

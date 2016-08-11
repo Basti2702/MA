@@ -111,7 +111,7 @@ void IntervalMap::shiftStructure(double xMotion) {
 			for(int k = 0; k<inorderPC(intvl->tracks,0); k++)
 			{
 				pcNode* pc = getPCfromInterval(j, k);
-				pc->vehicle.stateVector.put(0,0, pc->vehicle.stateVector.get(0,0) -1 );
+				pc->vehicle.setX(j-CARINTERVAL-1 +0.5);
 			}
 
 		}

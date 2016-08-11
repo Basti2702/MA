@@ -10,6 +10,9 @@
 
 #include <string>
 #include <iostream>
+#include <exception>
+#include <map>
+#include <algorithm>
 #include "DataReader.h"
 #include "data.h"
 #include "IntervalMap.h"
@@ -19,6 +22,13 @@
 #define NUM_MEASUREMENT 10
 #define ASSOCIATION_THRESHOLD 3.5
 //1242
+
+typedef struct Convoy{
+	int ID;
+	std::vector<int> participatingVehicles;
+	pcNode* track;
+} Convoy;
+
 class ConvoyTracker {
 public:
 	ConvoyTracker();
@@ -31,6 +41,8 @@ public:
 
 	void readEMLData(std::string number);
 	void associateAndUpdate(std::vector<PointCell> vehicles, std::vector<pcNode*> trackedVehicles);
+	void findConvoy(PointCell vehicle);
+
 	double getCurrentSpeed() const;
 	void setCurrentSpeed(double currentSpeed);
 	double getCurrentYawRate() const;
@@ -50,6 +62,7 @@ public:
 
 private:
 	int ID;
+	int convoyID;
 
 	double currentSpeed;
 	double currentYawRate;
@@ -57,6 +70,9 @@ private:
 	double x, xOld;
 	double y, yOld;
 	double yaw, yawOld;
+
+	std::map<int, std::vector<PointCell> > history;
+	std::vector<Convoy>convoys;
 };
 
 #endif /* CONVOYTRACKER_H_ */
