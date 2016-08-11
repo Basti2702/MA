@@ -324,6 +324,10 @@ pcNode* IntervalMap::insertPC(pcNode* leaf, PointCell vehicle) {
 	}
 }
 
+/**
+ * Inorder traversal of tree in given interval
+ * returns the number of elements in this tree
+ */
 int IntervalMap::inorderTracks(int interval) {
 	node* intvl = getInterval(map, interval);
 	if (intvl == NULL) {

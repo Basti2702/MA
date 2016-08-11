@@ -113,8 +113,8 @@ void PointCell::update(Matrix<double> newState)
 	velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
 	phi = (thetaNew-theta) / TIMESTAMP;
 
-	stateVector.put(3,0,velocity);
-	stateVector.put(4,0,phi);
+	setVelocity(velocity);
+	setPhi(phi);
 	newState.put(3,0,velocity);
 	newState.put(4,0,phi);
 

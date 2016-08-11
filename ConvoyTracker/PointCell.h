@@ -17,6 +17,7 @@ public:
 	virtual ~PointCell();
 
 	Matrix<double> stateVector; //x = [x , y, theta(rad), velocity(m/s), yaw rate(rad/s)]
+	Matrix<double> stateCopy;
 	void predict();
 	void update(Matrix<double> newState);
 	void setID();
@@ -50,7 +51,7 @@ private:
 	Matrix<double> H; //covariance of new measurement
 	Matrix<double> R; //measurement noise, in our case the same as process noise
 	Matrix<double> K;
-	Matrix<double> stateCopy;
+
 	IdentityMatrix<double> I;
 
 	int ID;

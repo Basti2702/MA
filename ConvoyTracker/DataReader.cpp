@@ -343,29 +343,28 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 				break;
 			}
 			theta = atan(width/length);
-			vehicle.stateVector.put(2,0,theta*M_PI / 180.0); //theta
+			vehicle.setTheta(theta*M_PI / 180.0); //theta
 			//due to prior knowledge on highways, velocitys for diffrent lanes are estimated as below
 			if(y < -4.5)
 			{
-				vehicle.stateVector.put(3,0, currentSpeed + 11.11); //velocity + 40kmh
+				vehicle.setVelocity(currentSpeed + 11.11); //velocity + 40kmh
 			}
 			else if(y < -1.5)
 			{
-				vehicle.stateVector.put(3,0, currentSpeed + 5.55); //velocity + 20kmh
+				vehicle.setVelocity(currentSpeed + 5.55); //velocity + 20kmh
 			}
 			else if(y > 4.5)
 			{
-				vehicle.stateVector.put(3,0, currentSpeed - 11.11); //velocity - 40kmh
+				vehicle.setVelocity(currentSpeed - 11.11); //velocity - 40kmh
 			}
 			else if(y > 1.5)
 			{
-				vehicle.stateVector.put(3,0, currentSpeed - 5.55); //velocity - 20kmh
+				vehicle.setVelocity(currentSpeed - 5.55); //velocity - 20kmh
 			}
 			else
 			{
-				vehicle.stateVector.put(3,0, currentSpeed); //velocity
+				vehicle.setVelocity(currentSpeed); //velocity
 			}
-			vehicle.setVelocity(currentSpeed + 11.11);
 			vehicle.setPhi(currentYawRate); //yaw rate
 
 			vehicles.push_back(vehicle);

@@ -16,7 +16,7 @@
 #include "PGMReader.h"
 #include "PointCell.h"
 
-#define NUM_MEASUREMENT 2
+#define NUM_MEASUREMENT 10
 #define ASSOCIATION_THRESHOLD 3.5
 //1242
 class ConvoyTracker {

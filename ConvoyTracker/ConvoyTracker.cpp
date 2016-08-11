@@ -101,11 +101,14 @@ int main()
 		for(int j = 99; j>=0; j--)
 		{
 			//TODO: move predicted vehicles in right interval and right y s
-			pcNode* tracks = tracker.intervalMap.getPCfromInterval(j,0);
-			int k = 1;
+			int k = 0;
+			pcNode* tracks = tracker.intervalMap.getPCfromInterval(j,k++);
 			while(tracks != NULL)
 			{
 				tracks->vehicle.predict();
+				tracks->y = tracks->vehicle.getY();
+				PointCell pc = tracks->vehicle;
+				//tracker.intervalMap.deletePCfromInterval(j, pc);
 				pcNode* tmp = NULL;
 				if(tracks->vehicle.getX() > j+1-CARINTERVAL)
 				{
@@ -119,7 +122,37 @@ int main()
 				}
 				else
 				{
-					trackedVehicles.push_back(tracks);
+					//update current node
+					if(tracker.intervalMap.inorderTracks(j) == 1)
+					{
+						trackedVehicles.push_back(tracks);
+					}
+					else
+					{
+						bool rightPos = false;
+						if((tracks->left != NULL && tracks->left->y < tracks->y) || tracks->left == NULL)
+						{
+							//left ok
+							//now check right child
+							if((tracks->right != NULL && tracks->right->y > tracks->y) || tracks->right == NULL)
+							{
+								//right ok -> node still in right position
+								rightPos = true;
+								trackedVehicles.push_back(tracks);
+							}
+						}
+						if(!rightPos)
+						{
+							//node is wrong position -> delete PC from tree and add it again
+							toDelete.push_back(tracks);
+							tmp = tracker.intervalMap.insertNewTrack(pc);
+							if(tmp != NULL)
+							{
+								trackedVehicles.push_back(tmp);
+							}
+						}
+
+					}
 				}
 				tracks = tracker.intervalMap.getPCfromInterval(j,k++);
 			}
@@ -311,8 +344,37 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 		{
 			pcNode* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			pcNode* update = trackedVehicles.at(minIndex);
+			int intvl = (int) update->vehicle.stateCopy.get(0,0);
+			intvl += CARINTERVAL;
 			update->vehicle.update(vehicles.at(i).stateVector);
+			update->y = update->vehicle.getY();
+			PointCell pc = update->vehicle;
 			//TODO: move to correct interval if necessary
+			if(intervalMap.inorderTracks(intvl) == 1)
+			{
+			}
+			else
+			{
+				bool rightPos = false;
+				if((update->left != NULL && update->left->y < update->y) || update->left == NULL)
+				{
+					//left ok
+					//now check right child
+					if((update->right != NULL && update->right->y > update->y) || update->right == NULL)
+					{
+						//right ok -> node still in right position
+						rightPos = true;
+					}
+				}
+				if(!rightPos)
+				{
+					//node is wrong position -> delete PC from tree and add it again
+					intervalMap.remove(update, intvl);
+					intervalMap.insertNewTrack(pc);
+				}
+
+			}
+
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
 			std::cout << "Updated vehicle with ID " << update->vehicle.getID() << std::endl;
