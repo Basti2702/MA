@@ -42,6 +42,8 @@ public:
 	void readEMLData(std::string number);
 	void associateAndUpdate(std::vector<PointCell> vehicles, std::vector<pcNode*> trackedVehicles);
 	void findConvoy(PointCell vehicle);
+	void shiftConvoyHistory(double x);
+	void rotateConvoyHistory(double theta, double y);
 
 	double getCurrentSpeed() const;
 	void setCurrentSpeed(double currentSpeed);

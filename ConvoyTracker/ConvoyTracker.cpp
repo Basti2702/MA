@@ -97,6 +97,9 @@ int main()
 		tracker.intervalMap.shiftStructure(deltaX);
 		tracker.intervalMap.rotateStructure(deltaYaw, deltaY);
 
+		tracker.shiftConvoyHistory(deltaX);
+		tracker.rotateConvoyHistory(deltaYaw, deltaY);
+
 		//2. Predict current vehicle states
 		std::vector<pcNode*> toDelete;
 		for(int j = 99; j>=0; j--)
@@ -473,4 +476,84 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 			}
 		}
 	}
+}
+
+/**
+ * shifts values of stored convoy tracks and history infos by given amount because it´s values are relative to own vehicle position
+ */
+void ConvoyTracker::shiftConvoyHistory(double x)
+{
+	//update history
+	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
+	{
+		std::vector<PointCell> currentHistory = it->second;
+		for(uint i = 0; i < currentHistory.size(); i++)
+		{
+			currentHistory.at(i).setX(currentHistory.at(i).getX() - x);
+		}
+	}
+
+	//update Convoys
+	for(uint i = 0; i < convoys.size(); i++)
+	{
+		Convoy currentConvoy = convoys.at(i);
+		for(int j = 0; j < intervalMap.inorderPC(currentConvoy.track, 0); i++)
+		{
+			int count = 0;
+			pcNode* track =  intervalMap.getPC(currentConvoy.track,j,count);
+			track->vehicle.setX(track->vehicle.getX() - x);
+		}
+	}
+}
+
+/**
+ * rotates and updates lateral position of stored convoy tracks and history infos by given amount because it´s values are relative to own vehicle position
+ */
+void ConvoyTracker::rotateConvoyHistory(double theta, double y)
+{
+	double angleInRadians = theta*M_PI/180.0;
+	double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
+			{ sin(angleInRadians), cos(angleInRadians) } };
+	//update history
+	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
+	{
+		std::vector<PointCell> currentHistory = it->second;
+		for(uint i = 0; i < currentHistory.size(); i++)
+		{
+			currentHistory.at(i).setY(currentHistory.at(i).getY() - y);
+			currentHistory.at(i).setTheta(currentHistory.at(i).getTheta() - angleInRadians);
+
+			double xAbs = currentHistory.at(i).getX();
+			double yAbs = currentHistory.at(i).getY();
+
+			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
+			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+
+			currentHistory.at(i).setY(currentHistory.at(i).getY() - yAbs);
+			currentHistory.at(i).setX(currentHistory.at(i).getX() - xAbs);
+		}
+	}
+
+	//update Convoys
+	for(uint i = 0; i < convoys.size(); i++)
+	{
+		Convoy currentConvoy = convoys.at(i);
+		for(int j = 0; j < intervalMap.inorderPC(currentConvoy.track, 0); i++)
+		{
+			int count = 0;
+			pcNode* track =  intervalMap.getPC(currentConvoy.track,j,count);
+			track->vehicle.setY(track->vehicle.getY() - y);
+			track->vehicle.setTheta(track->vehicle.getTheta() - angleInRadians);
+
+			double xAbs = track->vehicle.getX();
+			double yAbs = track->vehicle.getY();
+
+			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
+			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+
+			track->vehicle.setY(track->vehicle.getY() - yAbs);
+			track->vehicle.setX(track->vehicle.getX() - xAbs);
+		}
+	}
+
 }
