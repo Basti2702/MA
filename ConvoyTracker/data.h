@@ -15,6 +15,8 @@
 #define EMLPATH "./Laserdata/EML"
 #define CARINTERVAL 0
 #define TIMESTAMP 0.04 //40ms -> 25hz
+#define NUMBER_OF_INTERVALS 100
+#define INTERVALL_LENGTH 1 //unit m
 
 typedef struct laserdata_raw{
 	double angle;

@@ -15,8 +15,7 @@
 #include "data.h"
 #include "PointCell.h"
 
-#define NUMBER_OF_INTERVALS 100
-#define INTERVALL_LENGTH 1 //unit m
+
 
 
 struct pcNode

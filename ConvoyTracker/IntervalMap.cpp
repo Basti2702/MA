@@ -111,7 +111,7 @@ void IntervalMap::shiftStructure(double xMotion) {
 			for(int k = 0; k<inorderPC(intvl->tracks,0); k++)
 			{
 				pcNode* pc = getPCfromInterval(j, k);
-				pc->vehicle.setX(j-CARINTERVAL-1 +0.5);
+				pc->vehicle.setX(j-CARINTERVAL +0.5);
 			}
 
 		}
@@ -174,7 +174,8 @@ void IntervalMap::rotateStructure(double angle, double yMotion) {
 			else
 			{
 				//vehicle.x -= xAbs;
-				vehicle.setX(vehicle.getX() - xAbs);
+				//vehicle.setX(vehicle.getX() - xAbs);
+				vehicle.subInvtl -= xAbs;
 				//add vehicle to current interval again
 				insertPCintoInterval(j, vehicle);
 			}
@@ -570,16 +571,17 @@ pcNode* IntervalMap::insertNewTrack(PointCell vehicle)
 {
 	double x = vehicle.getX();
 	int interval = (int) x;
-	interval += CARINTERVAL;
+	int realinterval = interval + CARINTERVAL;
 
-	if(interval > 99)
+	if(realinterval > 99)
 	{
 		return NULL;
 	}
 
+	vehicle.subInvtl = (vehicle.getX() - interval);
 	vehicle.setX(((double) interval)+0.5);
 
-	return insertPCintoInterval(interval, vehicle);
+	return insertPCintoInterval(realinterval, vehicle);
 }
 
 void IntervalMap::removeVehicle(pcNode* node)

@@ -19,8 +19,8 @@
 #include "PGMReader.h"
 #include "PointCell.h"
 
-#define NUM_MEASUREMENT 10
-#define ASSOCIATION_THRESHOLD 3.5
+#define NUM_MEASUREMENT 100
+#define ASSOCIATION_THRESHOLD 4.5
 //1242
 
 typedef struct Convoy{

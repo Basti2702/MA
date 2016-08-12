@@ -52,11 +52,20 @@ std::string getNextMeasureAsString(int i)
 int main()
 {
 /*	PGMReader pgmReader;
+	double speed = 4.0/3.0;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::string number = getNextMeasureAsString(i);
 		pgmReader.simulateLaserRays(number);
+
+		std::ofstream EMLMeasureFile;
+		std::ostringstream measurePath;
+		measurePath << "./Laserdata/EML" << number << ".txt";
+		EMLMeasureFile.open (measurePath.str().c_str());
+		EMLMeasureFile << ((double)i)*speed << " 0 0 120 0" << std::endl;
+		EMLMeasureFile.close();
 	}*/
+
 	ConvoyTracker tracker;
 /*	IntervalMap test;
 	PointCell pc;
@@ -129,6 +138,8 @@ int main()
 					//update current node
 					if(tracker.intervalMap.inorderTracks(j) == 1)
 					{
+						tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
+						tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
 						trackedVehicles.push_back(tracks);
 					}
 					else
@@ -142,6 +153,8 @@ int main()
 							{
 								//right ok -> node still in right position
 								rightPos = true;
+								tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
+								tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
 								trackedVehicles.push_back(tracks);
 							}
 						}
@@ -168,8 +181,6 @@ int main()
 		}
 		//3. Associate and Update
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
-
-		//4. find/update Convoytracks
 
 	}
 	return 0;
@@ -361,49 +372,73 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 			update->vehicle.update(vehicles.at(i).stateVector);
 			update->y = update->vehicle.getY();
 			PointCell pc = update->vehicle;
+			bool inserted = false;
 			//TODO: move to correct interval if necessary
 			if(update->vehicle.getX() > intvl+1-CARINTERVAL || update->vehicle.getX() < intvl-CARINTERVAL)
 			{
 				//vehicle has to be moved
-				intervalMap.insertNewTrack(update->vehicle);
+				pcNode* newPC = intervalMap.insertNewTrack(update->vehicle);
 				intervalMap.remove(update, intvl);
-			}
+				inserted = true;
 
-
-			else if(intervalMap.inorderTracks(intvl) == 1)
-			{
+				if(newPC)
+				{
+					findConvoy(newPC->vehicle);
+					history.at(newPC->vehicle.getID()).push_back(newPC->vehicle);
+				}
 			}
 			else
 			{
-				bool rightPos = false;
-				if((update->left != NULL && update->left->y < update->y) || update->left == NULL)
-				{
-					//left ok
-					//now check right child
-					if((update->right != NULL && update->right->y > update->y) || update->right == NULL)
-					{
-						//right ok -> node still in right position
-						rightPos = true;
-					}
-				}
-				if(!rightPos)
-				{
-					//node is wrong position -> delete PC from tree and add it again
-					intervalMap.remove(update, intvl);
-					intervalMap.insertNewTrack(pc);
-				}
+				update->vehicle.subInvtl += update->vehicle.getX() - (intvl-CARINTERVAL);
+				update->vehicle.setX((intvl-CARINTERVAL) + 0.5);
 
+				findConvoy(update->vehicle);
+				history.at(update->vehicle.getID()).push_back(update->vehicle);
 			}
 
+			if(!inserted)
+			{
+				if(intervalMap.inorderTracks(intvl) == 1)
+				{
+				}
+				else
+				{
+					bool rightPos = false;
+					if((update->left != NULL && update->left->y < update->y) || update->left == NULL)
+					{
+						//left ok
+						//now check right child
+						if((update->right != NULL && update->right->y > update->y) || update->right == NULL)
+						{
+							//right ok -> node still in right position
+							rightPos = true;
+						}
+						findConvoy(update->vehicle);
+						history.at(update->vehicle.getID()).push_back(update->vehicle);
+					}
+					if(!rightPos)
+					{
+						//node is wrong position -> delete PC from tree and add it again
+						intervalMap.remove(update, intvl);
+						pcNode* newpc = intervalMap.insertNewTrack(pc);
+						if(newpc)
+						{
+							findConvoy(newpc->vehicle);
+							history.at(newpc->vehicle.getID()).push_back(newpc->vehicle);
+						}
+					}
+
+				}
+			}
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
 
 			//update history of given vehicle
-			history.at(pc.getID()).push_back(pc);
+
 
 			std::cout << "Updated vehicle with ID " << pc.getID() << std::endl;
 
-//			findConvoy(pc);
+			findConvoy(pc);
 		}
 	}
 
@@ -469,7 +504,13 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						newConvoy.ID = convoyID++;
 						newConvoy.participatingVehicles.push_back(pc.getID());
 						newConvoy.participatingVehicles.push_back(vehicle.getID());
-						intervalMap.insertPC(newConvoy.track, vehicle);
+						newConvoy.track = new pcNode;
+						newConvoy.track->y = vehicle.getY();
+						newConvoy.track->vehicle = vehicle;
+						newConvoy.track->left = NULL;
+						newConvoy.track->right = NULL;
+						newConvoy.track->parent = NULL;
+						convoys.push_back(newConvoy);
 					}
 					return;
 				}
@@ -486,21 +527,21 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 	//update history
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
-		std::vector<PointCell> currentHistory = it->second;
-		for(uint i = 0; i < currentHistory.size(); i++)
+		for(uint i = 0; i < it->second.size(); i++)
 		{
-			currentHistory.at(i).setX(currentHistory.at(i).getX() - x);
+			int numIntervals = (int) ((it->second.at(i).subInvtl + it->second.at(i).getX()) / INTERVALL_LENGTH);
+			it->second.at(i).setX(it->second.at(i).getX() - numIntervals);
+			it->second.at(i).subInvtl -= numIntervals;
 		}
 	}
 
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
 	{
-		Convoy currentConvoy = convoys.at(i);
-		for(int j = 0; j < intervalMap.inorderPC(currentConvoy.track, 0); i++)
+		for(int j = 0; j < intervalMap.inorderPC(convoys.at(i).track, 0); j++)
 		{
 			int count = 0;
-			pcNode* track =  intervalMap.getPC(currentConvoy.track,j,count);
+			pcNode* track =  intervalMap.getPC(convoys.at(i).track,j,count);
 			track->vehicle.setX(track->vehicle.getX() - x);
 		}
 	}
@@ -517,31 +558,29 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 	//update history
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
-		std::vector<PointCell> currentHistory = it->second;
-		for(uint i = 0; i < currentHistory.size(); i++)
+		for(uint i = 0; i < it->second.size(); i++)
 		{
-			currentHistory.at(i).setY(currentHistory.at(i).getY() - y);
-			currentHistory.at(i).setTheta(currentHistory.at(i).getTheta() - angleInRadians);
+			it->second.at(i).setY(it->second.at(i).getY() - y);
+			it->second.at(i).setTheta(it->second.at(i).getTheta() - angleInRadians);
 
-			double xAbs = currentHistory.at(i).getX();
-			double yAbs = currentHistory.at(i).getY();
+			double xAbs = it->second.at(i).getX();
+			double yAbs = it->second.at(i).getY();
 
 			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
 			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
-			currentHistory.at(i).setY(currentHistory.at(i).getY() - yAbs);
-			currentHistory.at(i).setX(currentHistory.at(i).getX() - xAbs);
+			it->second.at(i).setY(it->second.at(i).getY() - yAbs);
+			it->second.at(i).subInvtl -= xAbs;
 		}
 	}
 
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
 	{
-		Convoy currentConvoy = convoys.at(i);
-		for(int j = 0; j < intervalMap.inorderPC(currentConvoy.track, 0); i++)
+		for(int j = 0; j < intervalMap.inorderPC(convoys.at(i).track, 0); j++)
 		{
 			int count = 0;
-			pcNode* track =  intervalMap.getPC(currentConvoy.track,j,count);
+			pcNode* track =  intervalMap.getPC(convoys.at(i).track,j,count);
 			track->vehicle.setY(track->vehicle.getY() - y);
 			track->vehicle.setTheta(track->vehicle.getTheta() - angleInRadians);
 
@@ -552,7 +591,7 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
 			track->vehicle.setY(track->vehicle.getY() - yAbs);
-			track->vehicle.setX(track->vehicle.getX() - xAbs);
+			track->vehicle.subInvtl -= xAbs;
 		}
 	}
 

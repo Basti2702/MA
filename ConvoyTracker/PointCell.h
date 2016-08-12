@@ -18,6 +18,9 @@ public:
 
 	Matrix<double> stateVector; //x = [x , y, theta(rad), velocity(m/s), yaw rate(rad/s)]
 	Matrix<double> stateCopy;
+
+	double subInvtl;
+
 	void predict();
 	void update(Matrix<double> newState);
 	void setID();

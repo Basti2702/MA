@@ -14,7 +14,7 @@ PointCell::PointCell()
 	P = Matrix<double>(5,5);
 	//initialize P
 	//values for position is trusted more than value for orientation and even more than
-	P.put(0,0, 2); //x
+	P.put(0,0, 0.5); //x
 	P.put(1,1, 2); //y
 	P.put(2,2, 10); //theta
 	P.put(3,3, 10);//v
@@ -39,6 +39,8 @@ PointCell::PointCell()
 	I = IdentityMatrix<double>(5,5);
 	F = IdentityMatrix<double>(5,5);
 	F.put(2,4, TIMESTAMP);
+
+	subInvtl = 0.5;
 }
 
 PointCell::~PointCell() {
