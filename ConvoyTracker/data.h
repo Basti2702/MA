@@ -11,12 +11,33 @@
 #include <vector>
 
 #define NUMBER_LASERRAYS 581
-#define MEASUREPATH "./Laserdata/LaserMessung"
-#define EMLPATH "./Laserdata/EML"
-#define CARINTERVAL 0
+#define CARINTERVAL 5
 #define TIMESTAMP 0.04 //40ms -> 25hz
 #define NUMBER_OF_INTERVALS 100
 #define INTERVALL_LENGTH 1 //unit m
+
+//#define CREATE_MEASURES;
+#define SZENARIO 1
+
+#if SZENARIO == 1
+	#define NUM_MEASUREMENT 100
+	#define MEASUREPATH "./Laserdata/Szenario1/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario1/EML"
+#elif SZENARIO == 2
+	#define NUM_MEASUREMENT 19
+	#define MEASUREPATH "./Laserdata/Szenario2/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario2/EML"
+#elif SZENARIO == 3
+	#define NUM_MEASUREMENT 30
+	#define MEASUREPATH "./Laserdata/Szenario3/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario3/EML"
+#elif SZENARIO == 4
+	#define NUM_MEASUREMENT 30
+	#define MEASUREPATH "./Laserdata/Szenario4/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario4/EML"
+#endif
+
+
 
 typedef struct laserdata_raw{
 	double angle;

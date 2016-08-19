@@ -51,44 +51,24 @@ std::string getNextMeasureAsString(int i)
 
 int main()
 {
-/*	PGMReader pgmReader;
+#ifdef CREATE_MEASURES
+	PGMReader pgmReader;
 	double speed = 4.0/3.0;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::string number = getNextMeasureAsString(i);
 		pgmReader.simulateLaserRays(number);
 
-		std::ofstream EMLMeasureFile;
+	/*	std::ofstream EMLMeasureFile;
 		std::ostringstream measurePath;
 		measurePath << "./Laserdata/EML" << number << ".txt";
 		EMLMeasureFile.open (measurePath.str().c_str());
 		EMLMeasureFile << ((double)i)*speed << " 0 0 120 0" << std::endl;
-		EMLMeasureFile.close();
-	}*/
+		EMLMeasureFile.close();*/
+	}
+#endif
 
 	ConvoyTracker tracker;
-/*	IntervalMap test;
-	PointCell pc;
-	pc.stateVector.put(0,0, 10);
-	pc.stateVector.put(1,0, 0);
-	pc.stateVector.put(2,0, 45*M_PI / 180.0);
-	pc.stateVector.put(3,0, 33.33);
-	pc.stateVector.put(4,0, 0);
-	pc.predict();
-	std::cout << "X: " << pc.stateVector.get(0,0) << " Y: " << pc.stateVector.get(1,0) << " Theta: " << pc.stateVector.get(2,0) << " Vel: " << pc.stateVector.get(3,0) << " Phi: " << pc.stateVector.get(4,0) << std::endl;
-	PointCell pc2;
-	pc2.stateVector.put(0,0, 10.5);
-	pc2.stateVector.put(1,0, 1.2);
-	pc2.stateVector.put(2,0, 48*M_PI / 180.0);
-	pc2.stateVector.put(3,0, 33.33);
-	pc2.stateVector.put(4,0, 0);
-	pc.update(pc2.stateVector);
-	std::cout << "NewState: X: " << pc2.stateVector.get(0,0) << " Y: " << pc2.stateVector.get(1,0) << " Theta: " << pc2.stateVector.get(2,0) << " Vel: " << pc2.stateVector.get(3,0) << " Phi: " << pc2.stateVector.get(4,0) << std::endl;
-	std::cout << "StateVec after Update X: " << pc.stateVector.get(0,0) << " Y: " << pc.stateVector.get(1,0) << " Theta: " << pc.stateVector.get(2,0) << " Vel: " << pc.stateVector.get(3,0) << " Phi: " << pc.stateVector.get(4,0) << std::endl;
-
-	test.insertNewTrack(pc);
-	test.insertNewTrack(pc2);
-	pcNode* testpc = test.getPCfromInterval(10, 1);*/
 
 	std::vector<PointCell> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)

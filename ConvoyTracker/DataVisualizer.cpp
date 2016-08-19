@@ -143,9 +143,8 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 	{
 		Convoy curConv = convoys.at(i);
 		myfile << "<polyline points=\"";
-		for(int j = 0; j< curConv.tracks.size(); j++)
+		for(uint j = 0; j< curConv.tracks.size(); j++)
 		{
-			int count = 0;
 			Pos curPos =  curConv.tracks.at(j);
 			double x = curPos.x;
 			double y = curPos.y;

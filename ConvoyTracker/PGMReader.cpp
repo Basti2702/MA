@@ -25,7 +25,6 @@ int** PGMReader::readPGMFile(const char* filename)
     char version[3];
     int col, row, max_gray,carX;
     int i, j;
-    int lo, hi;
 
     pgmFile = fopen(filename, "rb");
     if (pgmFile == NULL) {
@@ -217,8 +216,9 @@ void PGMReader::simulateLaserRays(std::string number)
 	measurePath << MEASUREPATH << number << ".txt";
 	laserMeasureFile.open (measurePath.str().c_str());
 
-	std::string filename = "/home/basti/MA/ConvoyTracker/Laserdata/LaserTest.pgm";
-	int** image = readPGMFile(filename.c_str());
+	measurePath.clear();
+	measurePath << MEASUREPATH << number << ".pgm";
+	int** image = readPGMFile(measurePath.str().c_str());
 	if(image == NULL)
 	{
 		fprintf(stderr, "COULD NOT READ FILE!");

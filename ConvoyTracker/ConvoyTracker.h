@@ -20,11 +20,20 @@
 #include "PointCell.h"
 #include "DataVisualizer.h"
 
-#define NUM_MEASUREMENT 100
+
 #define ASSOCIATION_THRESHOLD 4
-//1242
 
 
+/**
+ * Szenario 1: own car driving straight with 120km/h in the second of three lanes, all other cars are driving with the same speed as well
+ * 			   Convoy should be tracked on the left lane
+ * Szenario 2: own car driving straight with 120km/h in the second of three lanes, two cars in the left lane are driving straight with 140 km/h,
+ * 			   but there is a obstacle in this lane so the cars move to the middle lane to avoid contact
+ * Szenario 3: own car driving straight with 120km/h in the second of three lanes, two cars in the left lane are driving straight with 140 km/h,
+ * 			   but there is a obstacle in this lane so the cars move to the middle lane to avoid contact but move back to the left lane behind this obstacle
+ * Szenario 4: own car is changing the lane
+ *
+ */
 
 
 
