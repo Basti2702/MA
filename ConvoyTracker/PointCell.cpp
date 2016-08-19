@@ -14,11 +14,11 @@ PointCell::PointCell()
 	P = Matrix<double>(5,5);
 	//initialize P
 	//values for position is trusted more than value for orientation and even more than
-	P.put(0,0, 0.5); //x
-	P.put(1,1, 2); //y
-	P.put(2,2, 10); //theta
-	P.put(3,3, 10);//v
-	P.put(4,4, 10);//phi
+	P.put(0,0, 1000); //x
+	P.put(1,1, 1000); //y
+	P.put(2,2, 1000); //theta
+	P.put(3,3, 1000);//v
+	P.put(4,4, 1000);//phi
 
 	Q = Matrix<double>(5,5);
 	//values taken from http://nbviewer.jupyter.org/github/balzer82/Kalman/blob/master/Extended-Kalman-Filter-CTRV.ipynb?create=1
@@ -115,6 +115,9 @@ void PointCell::update(Matrix<double> newState)
 	velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
 	phi = (thetaNew-theta) / TIMESTAMP;
 
+//	setX(xNew);
+//	setY(yNew);
+//	setTheta(thetaNew);
 	setVelocity(velocity);
 	setPhi(phi);
 	newState.put(3,0,velocity);

@@ -20,7 +20,7 @@
 #include "PointCell.h"
 
 #define NUM_MEASUREMENT 100
-#define ASSOCIATION_THRESHOLD 4.5
+#define ASSOCIATION_THRESHOLD 4
 //1242
 
 typedef struct Convoy{
