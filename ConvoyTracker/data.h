@@ -39,7 +39,18 @@ struct cartesian_segment{
 	std::vector<laserdata_cartesian> measures;
 };
 
+typedef struct EMLPos{
+	double x;
+	double y;
+	double theta;
+	double subIntvl;
+} Pos;
 
+typedef struct Convoy{
+	int ID;
+	std::vector<int> participatingVehicles;
+	std::vector<EMLPos> tracks;
+} Convoy;
 
 
 

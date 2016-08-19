@@ -366,7 +366,7 @@ std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_seg
 				vehicle.setVelocity(currentSpeed); //velocity
 			}
 			vehicle.setPhi(currentYawRate); //yaw rate
-
+			vehicle.subInvtl = 0.5;
 			vehicles.push_back(vehicle);
 			toPlot.push_back(relevantPoints);
 		}

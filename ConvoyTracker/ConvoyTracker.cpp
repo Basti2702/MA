@@ -138,7 +138,7 @@ int main()
 					//update current node
 					if(tracker.intervalMap.inorderTracks(j) == 1)
 					{
-						tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
+				//		tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
 						tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
 						trackedVehicles.push_back(tracks);
 					}
@@ -153,7 +153,7 @@ int main()
 							{
 								//right ok -> node still in right position
 								rightPos = true;
-								tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
+			//					tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
 								tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
 								trackedVehicles.push_back(tracks);
 							}
@@ -395,7 +395,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 			}
 			else
 			{
-				update->vehicle.subInvtl += update->vehicle.getX() - (intvl-CARINTERVAL);
+			//	update->vehicle.subInvtl += update->vehicle.getX() - (intvl-CARINTERVAL);
 				update->vehicle.setX((intvl-CARINTERVAL) + 0.5);
 
 				findConvoy(update->vehicle);
@@ -484,20 +484,35 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						if(it1 != currentConvoy.participatingVehicles.end() && it2 != currentConvoy.participatingVehicles.end())
 						{
 							//convoy already exists with both IDS
-							intervalMap.insertPC(currentConvoy.track, vehicle);
+							EMLPos newPos;
+							newPos.x = vehicle.getX();
+							newPos.y = vehicle.getY();
+							newPos.theta = vehicle.getTheta();
+							newPos.subIntvl = 0.5;
+							convoys.at(j).tracks.push_back(newPos);
 							convoyFound = true;
 							break;
 						}
 						else if (it1 != currentConvoy.participatingVehicles.end())
 						{
-							intervalMap.insertPC(currentConvoy.track, vehicle);
+							EMLPos newPos;
+							newPos.x = vehicle.getX();
+							newPos.y = vehicle.getY();
+							newPos.theta = vehicle.getTheta();
+							newPos.subIntvl = 0.5;
+							convoys.at(j).tracks.push_back(newPos);
 							currentConvoy.participatingVehicles.push_back(vehicle.getID());
 							convoyFound = true;
 							break;
 						}
 						else if (it2 != currentConvoy.participatingVehicles.end())
 						{
-							intervalMap.insertPC(currentConvoy.track, vehicle);
+							EMLPos newPos;
+							newPos.x = vehicle.getX();
+							newPos.y = vehicle.getY();
+							newPos.theta = vehicle.getTheta();
+							newPos.subIntvl = 0.5;
+							convoys.at(j).tracks.push_back(newPos);
 							currentConvoy.participatingVehicles.push_back(pc.getID());
 							convoyFound = true;
 							break;
@@ -510,12 +525,12 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						newConvoy.ID = convoyID++;
 						newConvoy.participatingVehicles.push_back(pc.getID());
 						newConvoy.participatingVehicles.push_back(vehicle.getID());
-						newConvoy.track = new pcNode;
-						newConvoy.track->y = vehicle.getY();
-						newConvoy.track->vehicle = vehicle;
-						newConvoy.track->left = NULL;
-						newConvoy.track->right = NULL;
-						newConvoy.track->parent = NULL;
+						EMLPos newPos;
+						newPos.x = vehicle.getX();
+						newPos.y = vehicle.getY();
+						newPos.theta = vehicle.getTheta();
+						newPos.subIntvl = 0.5;
+						newConvoy.tracks.push_back(newPos);
 						convoys.push_back(newConvoy);
 					}
 					return;
@@ -535,7 +550,8 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 	{
 		for(uint i = 0; i < it->second.size(); i++)
 		{
-			int numIntervals = (int) ((it->second.at(i).subInvtl + it->second.at(i).getX()) / INTERVALL_LENGTH);
+			it->second.at(i).subInvtl += x;
+			int numIntervals = (int) ((it->second.at(i).subInvtl) / INTERVALL_LENGTH);
 			it->second.at(i).setX(it->second.at(i).getX() - numIntervals);
 			it->second.at(i).subInvtl -= numIntervals;
 		}
@@ -544,13 +560,12 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
 	{
-		for(int j = 0; j < intervalMap.inorderPC(convoys.at(i).track, 0); j++)
+		for(uint j = 0; j < convoys.at(i).tracks.size(); j++)
 		{
-			int count = 0;
-			pcNode* track =  intervalMap.getPC(convoys.at(i).track,j,count);
-			int numIntervals = (int) ((track->vehicle.subInvtl + track->vehicle.getX()) / INTERVALL_LENGTH);
-			track->vehicle.setX(track->vehicle.getX() - numIntervals);
-			track->vehicle.subInvtl -= numIntervals;
+			convoys.at(i).tracks.at(j).subIntvl += x;
+			int numIntervals = (int) ((convoys.at(i).tracks.at(j).subIntvl) / INTERVALL_LENGTH);
+			convoys.at(i).tracks.at(j).x -= numIntervals;
+			convoys.at(i).tracks.at(j).subIntvl -= numIntervals;
 		}
 	}
 }
@@ -585,81 +600,24 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
 	{
-		for(int j = 0; j < intervalMap.inorderPC(convoys.at(i).track, 0); j++)
+		for(uint j = 0; j < convoys.at(i).tracks.size(); j++)
 		{
-			int count = 0;
-			pcNode* track =  intervalMap.getPC(convoys.at(i).track,j,count);
-			track->vehicle.setY(track->vehicle.getY() - y);
-			track->vehicle.setTheta(track->vehicle.getTheta() - angleInRadians);
+			convoys.at(i).tracks.at(j).y -= y;
+			convoys.at(i).tracks.at(j).theta -= angleInRadians;
 
-			double xAbs = track->vehicle.getX();
-			double yAbs = track->vehicle.getY();
+			double xAbs = convoys.at(i).tracks.at(j).x;
+			double yAbs = convoys.at(i).tracks.at(j).y;
 
 			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
 			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
-			track->vehicle.setY(track->vehicle.getY() - yAbs);
-			track->vehicle.subInvtl -= xAbs;
+			convoys.at(i).tracks.at(j).y -= yAbs;
+			convoys.at(i).tracks.at(j).subIntvl -= xAbs;
 		}
 	}
-
 }
 
 void ConvoyTracker::visualizeConvoys()
 {
-	int xOnCanvas = CANVASSIZE;
-	int yOnCanvas = CANVASSIZE/2;
-	std::ofstream myfile;
-	std::ostringstream filename;
-	filename << "./Visualization/Convoys.html";
-	myfile.open(filename.str().c_str());
-	myfile << "<!DOCTYPE html>" << std::endl;
-	myfile << "<html>" << std::endl;
-	myfile << "<body>" << std::endl;
-	myfile << "<svg width=\"" << CANVASSIZE << "\" height=\"" << CANVASSIZE
-			<< "\">" << std::endl;
-
-	//visualize Convoys
-	Pos lastPos = EML.at(EML.size() -1);
-	for(uint i = 0; i < convoys.size(); i++)
-	{
-		Convoy curConv = convoys.at(i);
-		myfile << "<polyline points=\"";
-		for(int j = 0; j< intervalMap.inorderPC(curConv.track, 0); j++)
-		{
-			int count = 0;
-			pcNode* track =  intervalMap.getPC(curConv.track,j,count);
-			double x = track->vehicle.getX();
-			double y = track->vehicle.getY();
-			xOnCanvas = CANVASSIZE;
-			yOnCanvas = CANVASSIZE/2;
-
-			xOnCanvas -= ((x + lastPos.x) * CANVASFACTOR);
-			yOnCanvas += ((y + lastPos.y) * CANVASFACTOR);
-
-			myfile << yOnCanvas << "," << xOnCanvas << " ";
-
-		}
-		myfile << "\" style=\"fill:white;stroke:red;stroke-width:4\" />" << std::endl;
-	}
-
-	//visualize Vehicle Motion
-	myfile << "<polyline points=\"";
-	for(uint i = 0; i<EML.size(); i++)
-	{
-		Pos curPos = EML.at(i);
-
-		xOnCanvas = CANVASSIZE;
-		yOnCanvas = CANVASSIZE/2;
-
-		xOnCanvas -= ((curPos.x) * CANVASFACTOR);
-		yOnCanvas += ((curPos.y) * CANVASFACTOR);
-
-		myfile << yOnCanvas << "," << xOnCanvas << " ";
-	}
-	myfile << "\" style=\"fill:white;stroke:green;stroke-width:4\" />" << std::endl;
-	myfile << "</svg>" << std::endl;
-	myfile << "</body>" << std::endl;
-	myfile << "</html>" << std::endl;
-	myfile.close();
+	visualizer.visualizeConvoys(EML, convoys);
 }

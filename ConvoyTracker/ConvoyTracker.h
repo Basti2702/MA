@@ -24,17 +24,9 @@
 #define ASSOCIATION_THRESHOLD 4
 //1242
 
-typedef struct Convoy{
-	int ID;
-	std::vector<int> participatingVehicles;
-	pcNode* track;
-} Convoy;
 
-typedef struct EMLPos{
-	int x;
-	int y;
-	int theta;
-} Pos;
+
+
 
 class ConvoyTracker {
 public:

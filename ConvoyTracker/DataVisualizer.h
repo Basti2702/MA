@@ -26,6 +26,7 @@ public:
 
 	void visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number);
 	void visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number);
+	void visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> convoys);
 
 private:
 	std::string colors[20];

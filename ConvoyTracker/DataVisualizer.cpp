@@ -123,4 +123,61 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 	myfile.close();
 }
 
+void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> convoys)
+{
+	int xOnCanvas = CANVASSIZE;
+	int yOnCanvas = CANVASSIZE/2;
+	std::ofstream myfile;
+	std::ostringstream filename;
+	filename << "./Visualization/Convoys.html";
+	myfile.open(filename.str().c_str());
+	myfile << "<!DOCTYPE html>" << std::endl;
+	myfile << "<html>" << std::endl;
+	myfile << "<body>" << std::endl;
+	myfile << "<svg width=\"" << CANVASSIZE << "\" height=\"" << CANVASSIZE
+			<< "\">" << std::endl;
 
+	//visualize Convoys
+	Pos lastPos = EML.at(EML.size() -1);
+	for(uint i = 0; i < convoys.size(); i++)
+	{
+		Convoy curConv = convoys.at(i);
+		myfile << "<polyline points=\"";
+		for(int j = 0; j< curConv.tracks.size(); j++)
+		{
+			int count = 0;
+			Pos curPos =  curConv.tracks.at(j);
+			double x = curPos.x;
+			double y = curPos.y;
+			xOnCanvas = CANVASSIZE;
+			yOnCanvas = CANVASSIZE/2;
+
+			xOnCanvas -= ((x + lastPos.x) * CANVASFACTOR);
+			yOnCanvas += ((y + lastPos.y) * CANVASFACTOR);
+
+			myfile << yOnCanvas << "," << xOnCanvas << " ";
+
+		}
+		myfile << "\" style=\"fill:white;stroke:red;stroke-width:4\" />" << std::endl;
+	}
+
+	//visualize Vehicle Motion
+	myfile << "<polyline points=\"";
+	for(uint i = 0; i<EML.size(); i++)
+	{
+		Pos curPos = EML.at(i);
+
+		xOnCanvas = CANVASSIZE;
+		yOnCanvas = CANVASSIZE/2;
+
+		xOnCanvas -= ((curPos.x) * CANVASFACTOR);
+		yOnCanvas += ((curPos.y) * CANVASFACTOR);
+
+		myfile << yOnCanvas << "," << xOnCanvas << " ";
+	}
+	myfile << "\" style=\"fill:white;stroke:green;stroke-width:4\" />" << std::endl;
+	myfile << "</svg>" << std::endl;
+	myfile << "</body>" << std::endl;
+	myfile << "</html>" << std::endl;
+	myfile.close();
+}
