@@ -124,5 +124,3 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 }
 
 
-
-

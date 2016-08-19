@@ -18,6 +18,7 @@
 #include "IntervalMap.h"
 #include "PGMReader.h"
 #include "PointCell.h"
+#include "DataVisualizer.h"
 
 #define NUM_MEASUREMENT 100
 #define ASSOCIATION_THRESHOLD 4
@@ -28,6 +29,12 @@ typedef struct Convoy{
 	std::vector<int> participatingVehicles;
 	pcNode* track;
 } Convoy;
+
+typedef struct EMLPos{
+	int x;
+	int y;
+	int theta;
+} Pos;
 
 class ConvoyTracker {
 public:
@@ -44,6 +51,7 @@ public:
 	void findConvoy(PointCell vehicle);
 	void shiftConvoyHistory(double x);
 	void rotateConvoyHistory(double theta, double y);
+	void visualizeConvoys();
 
 	double getCurrentSpeed() const;
 	void setCurrentSpeed(double currentSpeed);
@@ -73,8 +81,11 @@ private:
 	double y, yOld;
 	double yaw, yawOld;
 
+	DataVisualizer visualizer;
+
 	std::map<int, std::vector<PointCell> > history;
 	std::vector<Convoy>convoys;
+	std::vector<Pos> EML;
 };
 
 #endif /* CONVOYTRACKER_H_ */

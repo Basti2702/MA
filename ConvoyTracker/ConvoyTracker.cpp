@@ -183,6 +183,7 @@ int main()
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
 
 	}
+	tracker.visualizeConvoys();
 	return 0;
 }
 
@@ -251,6 +252,11 @@ void ConvoyTracker::readEMLData(std::string number)
 				}
 			}
     	}
+    	Pos curPos;
+    	curPos.x = x;
+    	curPos.y = y;
+    	curPos.theta = yaw;
+    	EML.push_back(curPos);
     }
 }
 
@@ -542,7 +548,9 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 		{
 			int count = 0;
 			pcNode* track =  intervalMap.getPC(convoys.at(i).track,j,count);
-			track->vehicle.setX(track->vehicle.getX() - x);
+			int numIntervals = (int) ((track->vehicle.subInvtl + track->vehicle.getX()) / INTERVALL_LENGTH);
+			track->vehicle.setX(track->vehicle.getX() - numIntervals);
+			track->vehicle.subInvtl -= numIntervals;
 		}
 	}
 }
@@ -595,4 +603,63 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 		}
 	}
 
+}
+
+void ConvoyTracker::visualizeConvoys()
+{
+	int xOnCanvas = CANVASSIZE;
+	int yOnCanvas = CANVASSIZE/2;
+	std::ofstream myfile;
+	std::ostringstream filename;
+	filename << "./Visualization/Convoys.html";
+	myfile.open(filename.str().c_str());
+	myfile << "<!DOCTYPE html>" << std::endl;
+	myfile << "<html>" << std::endl;
+	myfile << "<body>" << std::endl;
+	myfile << "<svg width=\"" << CANVASSIZE << "\" height=\"" << CANVASSIZE
+			<< "\">" << std::endl;
+
+	//visualize Convoys
+	Pos lastPos = EML.at(EML.size() -1);
+	for(uint i = 0; i < convoys.size(); i++)
+	{
+		Convoy curConv = convoys.at(i);
+		myfile << "<polyline points=\"";
+		for(int j = 0; j< intervalMap.inorderPC(curConv.track, 0); j++)
+		{
+			int count = 0;
+			pcNode* track =  intervalMap.getPC(curConv.track,j,count);
+			double x = track->vehicle.getX();
+			double y = track->vehicle.getY();
+			xOnCanvas = CANVASSIZE;
+			yOnCanvas = CANVASSIZE/2;
+
+			xOnCanvas -= ((x + lastPos.x) * CANVASFACTOR);
+			yOnCanvas += ((y + lastPos.y) * CANVASFACTOR);
+
+			myfile << yOnCanvas << "," << xOnCanvas << " ";
+
+		}
+		myfile << "\" style=\"fill:white;stroke:red;stroke-width:4\" />" << std::endl;
+	}
+
+	//visualize Vehicle Motion
+	myfile << "<polyline points=\"";
+	for(uint i = 0; i<EML.size(); i++)
+	{
+		Pos curPos = EML.at(i);
+
+		xOnCanvas = CANVASSIZE;
+		yOnCanvas = CANVASSIZE/2;
+
+		xOnCanvas -= ((curPos.x) * CANVASFACTOR);
+		yOnCanvas += ((curPos.y) * CANVASFACTOR);
+
+		myfile << yOnCanvas << "," << xOnCanvas << " ";
+	}
+	myfile << "\" style=\"fill:white;stroke:green;stroke-width:4\" />" << std::endl;
+	myfile << "</svg>" << std::endl;
+	myfile << "</body>" << std::endl;
+	myfile << "</html>" << std::endl;
+	myfile.close();
 }
