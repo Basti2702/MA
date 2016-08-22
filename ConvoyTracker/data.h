@@ -34,18 +34,22 @@
 	#define NUM_MEASUREMENT 100
 	#define MEASUREPATH "./Laserdata/Szenario1/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario1/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario1"
 #elif SZENARIO == 2
 	#define NUM_MEASUREMENT 33
 	#define MEASUREPATH "./Laserdata/Szenario2/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario2/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario2"
 #elif SZENARIO == 3
 	#define NUM_MEASUREMENT 30
 	#define MEASUREPATH "./Laserdata/Szenario3/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario3/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario3"
 #elif SZENARIO == 4
 	#define NUM_MEASUREMENT 30
 	#define MEASUREPATH "./Laserdata/Szenario4/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario4/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario4"
 #endif
 
 
