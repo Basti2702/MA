@@ -157,7 +157,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 			myfile << yOnCanvas << "," << xOnCanvas << " ";
 
 		}
-		myfile << "\" style=\"fill:white;stroke:red;stroke-width:4\" />" << std::endl;
+		myfile << "\" style=\"fill:none;stroke:red;stroke-width:4\" />" << std::endl;
 	}
 
 	//visualize Vehicle Motion
@@ -174,7 +174,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 
 		myfile << yOnCanvas << "," << xOnCanvas << " ";
 	}
-	myfile << "\" style=\"fill:white;stroke:green;stroke-width:4\" />" << std::endl;
+	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;
 	myfile << "</svg>" << std::endl;
 	myfile << "</body>" << std::endl;
 	myfile << "</html>" << std::endl;

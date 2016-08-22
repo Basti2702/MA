@@ -437,6 +437,8 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 
 void ConvoyTracker::findConvoy(PointCell vehicle)
 {
+	double x = vehicle.getX();
+	int interval = (int) x;
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
 		if(it->first == vehicle.getID())
@@ -449,7 +451,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 			PointCell pc = it->second.at(i);
 			if(pc.getX() - 0.5 <= vehicle.getX() && vehicle.getX() <= pc.getX() + 0.5)
 			{
-				if(pc.getY() - 0.5 <= vehicle.getY() && vehicle.getY() <= pc.getY() + 0.5)
+				if(pc.getY() - 1.0 <= vehicle.getY() && vehicle.getY() <= pc.getY() + 1.0)
 				{
 					//current vehicle position matches with one from history -> add this pointcell to convoy
 					int id1 = pc.getID();
@@ -465,7 +467,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						{
 							//convoy already exists with both IDS
 							EMLPos newPos;
-							newPos.x = vehicle.getX();
+							newPos.x = interval+0.5;
 							newPos.y = vehicle.getY();
 							newPos.theta = vehicle.getTheta();
 							newPos.subIntvl = 0.5;
@@ -476,7 +478,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						else if (it1 != currentConvoy.participatingVehicles.end())
 						{
 							EMLPos newPos;
-							newPos.x = vehicle.getX();
+							newPos.x = interval+0.5;
 							newPos.y = vehicle.getY();
 							newPos.theta = vehicle.getTheta();
 							newPos.subIntvl = 0.5;
@@ -488,7 +490,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						else if (it2 != currentConvoy.participatingVehicles.end())
 						{
 							EMLPos newPos;
-							newPos.x = vehicle.getX();
+							newPos.x = interval+0.5;
 							newPos.y = vehicle.getY();
 							newPos.theta = vehicle.getTheta();
 							newPos.subIntvl = 0.5;
@@ -506,7 +508,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						newConvoy.participatingVehicles.push_back(pc.getID());
 						newConvoy.participatingVehicles.push_back(vehicle.getID());
 						EMLPos newPos;
-						newPos.x = vehicle.getX();
+						newPos.x = interval+0.5;
 						newPos.y = vehicle.getY();
 						newPos.theta = vehicle.getTheta();
 						newPos.subIntvl = 0.5;

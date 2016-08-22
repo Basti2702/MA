@@ -217,6 +217,7 @@ void PGMReader::simulateLaserRays(std::string number)
 	laserMeasureFile.open (measurePath.str().c_str());
 
 	measurePath.clear();
+	measurePath.str("");
 	measurePath << MEASUREPATH << number << ".pgm";
 	int** image = readPGMFile(measurePath.str().c_str());
 	if(image == NULL)
