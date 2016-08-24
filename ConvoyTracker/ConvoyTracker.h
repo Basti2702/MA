@@ -22,6 +22,7 @@
 
 
 #define ASSOCIATION_THRESHOLD 4
+#define ASSOCIATION_Y_THRESHOLD 2
 
 class ConvoyTracker {
 public:

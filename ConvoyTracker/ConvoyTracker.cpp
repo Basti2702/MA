@@ -329,7 +329,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 			std::cout << "X1: " << x1 << " Y1: " << y1<< " Theta1: " << theta1 <<std::endl;
 
 			double dist = sqrt((x - x1)*(x - x1) + (y - y1)*(y - y1) + (theta - theta1)*(theta - theta1));
-			if(dist < minDist)
+
+			//only accept current vehicle as possible match if the majority of the distance is caused by the change of the x value
+			//that´s because cars normally are moving more in x direction instead of y
+			if(dist < minDist && fabs(y-y1) < ASSOCIATION_Y_THRESHOLD)
 			{
 				minDist = dist;
 				minIndex = j;
