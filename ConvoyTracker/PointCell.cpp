@@ -2,7 +2,7 @@
  * PointCell.cpp
  *
  *  Created on: 04.08.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #include "PointCell.h"

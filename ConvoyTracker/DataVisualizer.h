@@ -2,7 +2,7 @@
  * DataVisualizer.h
  *
  *  Created on: 21.06.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #ifndef DATAVISUALIZER_H_

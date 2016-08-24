@@ -2,7 +2,7 @@
  * PGMReader.h
  *
  *  Created on: 14.07.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #ifndef PGMREADER_H_

@@ -2,7 +2,7 @@
  * PGMReader.cpp
  *
  *  Created on: 14.07.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #include "PGMReader.h"

@@ -28,7 +28,7 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 2
+#define SZENARIO 3
 
 #if SZENARIO == 1
 	#define NUM_MEASUREMENT 100
@@ -36,12 +36,12 @@
 	#define EMLPATH "./Laserdata/Szenario1/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario1"
 #elif SZENARIO == 2
-	#define NUM_MEASUREMENT 33
+	#define NUM_MEASUREMENT 41
 	#define MEASUREPATH "./Laserdata/Szenario2/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario2/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario2"
 #elif SZENARIO == 3
-	#define NUM_MEASUREMENT 30
+	#define NUM_MEASUREMENT 60
 	#define MEASUREPATH "./Laserdata/Szenario3/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario3/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario3"

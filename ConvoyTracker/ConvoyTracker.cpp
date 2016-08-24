@@ -98,6 +98,7 @@ int main()
 			pcNode* tracks = tracker.intervalMap.getPCfromInterval(j,k++);
 			while(tracks != NULL)
 			{
+				//TODO: FIX BUG FOR STANDING CAR (negative x)!!!
 				tracks->vehicle.predict();
 				tracks->y = tracks->vehicle.getY();
 				PointCell pc = tracks->vehicle;
@@ -353,7 +354,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 		{
 			pcNode* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			pcNode* update = trackedVehicles.at(minIndex);
-			int intvl = (int) update->vehicle.getX();
+			int intvl = floor(update->vehicle.getX());
 			intvl += CARINTERVAL;
 			update->vehicle.update(vehicles.at(i).stateVector);
 			update->y = update->vehicle.getY();
@@ -438,7 +439,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 void ConvoyTracker::findConvoy(PointCell vehicle)
 {
 	double x = vehicle.getX();
-	int interval = (int) x;
+	int interval = floor(x);
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
 		if(it->first == vehicle.getID())

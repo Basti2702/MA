@@ -2,7 +2,7 @@
  * PointCell.h
  *
  *  Created on: 04.08.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #ifndef POINTCELL_H_

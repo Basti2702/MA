@@ -2,7 +2,7 @@
  * DataVisualizer.cpp
  *
  *  Created on: 21.06.2016
- *      Author: basti
+ *      Author: Sebastian Reinhart
  */
 
 #include "DataVisualizer.h"

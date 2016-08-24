@@ -500,6 +500,7 @@ pcNode* IntervalMap::get_prev_node(pcNode*now) {
 
 void IntervalMap::remove(pcNode*node, int interval) {
 	// Ein Blatt
+	//TODO: FIX BUG
 	if (!node->left && !node->right) {
 		*get_parent_ptr(node, interval) = 0;
 		delete node;
@@ -570,10 +571,10 @@ node* IntervalMap::at(int interval)
 pcNode* IntervalMap::insertNewTrack(PointCell vehicle)
 {
 	double x = vehicle.getX();
-	int interval = (int) x;
+	int interval = floor(x);
 	int realinterval = interval + CARINTERVAL;
 
-	if(realinterval > 99)
+	if(realinterval > 99 || realinterval < 0)
 	{
 		return NULL;
 	}
@@ -587,10 +588,10 @@ pcNode* IntervalMap::insertNewTrack(PointCell vehicle)
 void IntervalMap::removeVehicle(pcNode* node)
 {
 	double x = node->vehicle.getX();
-	int interval = (int) x;
+	int interval = floor(x);
 	interval += CARINTERVAL;
 
-	if(interval > 99)
+	if(interval > 99 || interval < 0)
 	{
 		return;
 	}
