@@ -211,6 +211,7 @@ double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
  */
 void PGMReader::simulateLaserRays(std::string number)
 {
+	int counter = atoi(number.c_str());
 	std::ofstream laserMeasureFile;
 	std::ostringstream measurePath;
 	measurePath << MEASUREPATH << number << ".txt";
@@ -218,7 +219,24 @@ void PGMReader::simulateLaserRays(std::string number)
 
 	measurePath.clear();
 	measurePath.str("");
+#if SZENARIO == 1
+	measurePath << MEASUREPATH << "0000.pgm";
+#elif SZENARIO == 4
+	if(counter < 30)
+	{
+		measurePath << MEASUREPATH << "0000.pgm";
+	}
+	else if(counter < 42)
+	{
+		measurePath << MEASUREPATH << number << ".pgm";
+	}
+	else
+	{
+		measurePath << MEASUREPATH << "0013.pgm";
+	}
+#else
 	measurePath << MEASUREPATH << number << ".pgm";
+#endif
 	int** image = readPGMFile(measurePath.str().c_str());
 	if(image == NULL)
 	{
@@ -227,8 +245,8 @@ void PGMReader::simulateLaserRays(std::string number)
 	}
 	//angel from -72.5 - 72.5 in 0.25 steps
 	double angle;
-	int startX = 9999;
-	int startY = 545;
+	int startX = numRow-1;
+	int startY = vehicleX;
 	int vecX = 1;
 	int vecY = 0;
 
@@ -257,7 +275,7 @@ void PGMReader::simulateLaserRays(std::string number)
 			double tmpX = endX;
 			double tmpY = endY;
 			endY = 0;
-			endX = 9999 + stepsToBorder/(tmpY/tmpX);
+			endX = startX + stepsToBorder/(tmpY/tmpX);
 		}
 		else if(angle > 0)
 		{
@@ -266,12 +284,12 @@ void PGMReader::simulateLaserRays(std::string number)
 			double tmpX = endX;
 			double tmpY = endY;
 			endY = numCol-1;
-			endX = 9999 + stepsToBorder/(tmpY/tmpX);
+			endX = startX + stepsToBorder/(tmpY/tmpX);
 		}
 		else
 		{
 			endX = 0;
-			endY = 545;
+			endY = vehicleX;
 		}
 
 		//compute straight line from our vehicle to the image border with given angle/vector to get the distance value for current laserray
