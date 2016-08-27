@@ -40,6 +40,7 @@ public:
 	void shiftConvoyHistory(double x);
 	void rotateConvoyHistory(double theta, double y);
 	void visualizeConvoys();
+	void visualizeHistory();
 
 	double getCurrentSpeed() const;
 	void setCurrentSpeed(double currentSpeed);

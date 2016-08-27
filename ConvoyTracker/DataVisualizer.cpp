@@ -178,3 +178,64 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 	myfile << "</html>" << std::endl;
 	myfile.close();
 }
+
+
+void DataVisualizer::visualizeHistory(std::vector<Pos> EML, std::map<int, std::vector<PointCell> > history)
+{
+	int xOnCanvas = CANVASSIZE;
+	int yOnCanvas = CANVASSIZE/2;
+	std::ofstream myfile;
+	std::ostringstream filename;
+	filename << VISUALIZATIONPATH << "/Historys.html";
+	myfile.open(filename.str().c_str());
+	myfile << "<!DOCTYPE html>" << std::endl;
+	myfile << "<html>" << std::endl;
+	myfile << "<body>" << std::endl;
+	myfile << "<svg width=\"" << CANVASSIZE << "\" height=\"" << CANVASSIZE
+			<< "\">" << std::endl;
+
+
+	//visualize Vehicle Motion
+	myfile << "<polyline points=\"";
+	for(uint i = 0; i<EML.size(); i++)
+	{
+		Pos curPos = EML.at(i);
+
+		xOnCanvas = CANVASSIZE;
+		yOnCanvas = CANVASSIZE/2;
+
+		xOnCanvas -= ((curPos.x) * CANVASFACTOR);
+		yOnCanvas += ((curPos.y) * CANVASFACTOR);
+
+		myfile << yOnCanvas << "," << xOnCanvas << " ";
+	}
+	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;
+
+	Pos lastPos = EML.at(EML.size() -1);
+	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
+	{
+		int index = it->first;
+		if(index > 20)
+		{
+			index = 20;
+		}
+		std::vector<PointCell> history = it->second;
+		myfile << "<polyline points=\"";
+		for(uint i = 0; i < history.size(); i++)
+		{
+			PointCell curPos = history.at(i);
+			xOnCanvas = CANVASSIZE;
+			yOnCanvas = CANVASSIZE/2;
+
+			xOnCanvas -= ((curPos.getX() + lastPos.x) * CANVASFACTOR);
+			yOnCanvas += ((curPos.getY() + lastPos.y) * CANVASFACTOR);
+
+			myfile << yOnCanvas << "," << xOnCanvas << " ";
+		}
+		myfile << "\" style=\"fill:none;stroke:" << colors[index-1] << ";stroke-width:4\" />" << std::endl;
+	}
+	myfile << "</svg>" << std::endl;
+	myfile << "</body>" << std::endl;
+	myfile << "</html>" << std::endl;
+	myfile.close();
+}

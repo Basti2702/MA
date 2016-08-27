@@ -165,6 +165,7 @@ int main()
 
 	}
 	tracker.visualizeConvoys();
+	tracker.visualizeHistory();
 	return 0;
 }
 
@@ -332,7 +333,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 
 			//only accept current vehicle as possible match if the majority of the distance is caused by the change of the x value
 			//that´s because cars normally are moving more in x direction instead of y
-			if(dist < minDist && fabs(y-y1) < ASSOCIATION_Y_THRESHOLD)
+			if(dist < minDist) //&& fabs(y-y1) < ASSOCIATION_Y_THRESHOLD)
 			{
 				minDist = dist;
 				minIndex = j;
@@ -606,4 +607,9 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 void ConvoyTracker::visualizeConvoys()
 {
 	visualizer.visualizeConvoys(EML, convoys);
+}
+
+void ConvoyTracker::visualizeHistory()
+{
+	visualizer.visualizeHistory(EML, history);
 }
