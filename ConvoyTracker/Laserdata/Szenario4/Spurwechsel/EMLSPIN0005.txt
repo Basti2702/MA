@@ -1,5 +1,0 @@
-y: -35
-
-Init Pos 799
-x   	y   theta  speed   yaw
-6.54 -1.16	-15      120    0

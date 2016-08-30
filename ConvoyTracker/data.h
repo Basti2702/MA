@@ -16,7 +16,7 @@
 #define NUMBER_OF_INTERVALS 100
 #define INTERVALL_LENGTH 1 //unit m
 
-//#define CREATE_MEASURES
+#define CREATE_MEASURES
 
 /**
  * Szenario 1: own car driving straight with 120km/h in the second of three lanes, all other cars are driving with the same speed as well
