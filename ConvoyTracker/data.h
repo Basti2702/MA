@@ -16,7 +16,7 @@
 #define NUMBER_OF_INTERVALS 100
 #define INTERVALL_LENGTH 1 //unit m
 
-#define CREATE_MEASURES
+//#define CREATE_MEASURES
 
 /**
  * Szenario 1: own car driving straight with 120km/h in the second of three lanes, all other cars are driving with the same speed as well
@@ -28,24 +28,36 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 4
+#define SZENARIO 1
 
 #if SZENARIO == 1
+/*
+ * Duration of ConvoyTracking: 2166794770ns
+ */
 	#define NUM_MEASUREMENT 100
 	#define MEASUREPATH "./Laserdata/Szenario1/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario1/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario1"
 #elif SZENARIO == 2
+/*
+ * Duration of ConvoyTracking: 167145447ns
+ */
 	#define NUM_MEASUREMENT 41
 	#define MEASUREPATH "./Laserdata/Szenario2/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario2/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario2"
 #elif SZENARIO == 3
+/*
+ * Duration of ConvoyTracking: 329825584ns
+ */
 	#define NUM_MEASUREMENT 60
 	#define MEASUREPATH "./Laserdata/Szenario3/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario3/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario3"
 #elif SZENARIO == 4
+/*
+ * Duration of ConvoyTracking: 2264392767ns
+ */
 	#define NUM_MEASUREMENT 100
 	#define MEASUREPATH "./Laserdata/Szenario4/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario4/EML/EML"

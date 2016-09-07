@@ -13,6 +13,7 @@
 #include <exception>
 #include <map>
 #include <algorithm>
+#include <chrono>
 #include "DataReader.h"
 #include "data.h"
 #include "IntervalMap.h"

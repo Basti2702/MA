@@ -69,7 +69,7 @@ int main()
 #endif
 
 	ConvoyTracker tracker;
-
+	auto start = std::chrono::steady_clock::now();
 	std::vector<PointCell> vehicles;
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
@@ -164,6 +164,8 @@ int main()
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
 
 	}
+	auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
 	tracker.visualizeConvoys();
 	tracker.visualizeHistory();
 	return 0;

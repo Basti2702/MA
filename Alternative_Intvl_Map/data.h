@@ -28,24 +28,36 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 1
+#define SZENARIO 4
 
 #if SZENARIO == 1
+/*
+ * Duration of ConvoyTracking: 2191435616ns
+ */
 	#define NUM_MEASUREMENT 100
 	#define MEASUREPATH "./Laserdata/Szenario1/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario1/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario1"
 #elif SZENARIO == 2
+/*
+ * Duration of ConvoyTracking: 167083632ns
+ */
 	#define NUM_MEASUREMENT 41
 	#define MEASUREPATH "./Laserdata/Szenario2/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario2/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario2"
 #elif SZENARIO == 3
+/*
+ * Duration of ConvoyTracking: 246819658ns
+ */
 	#define NUM_MEASUREMENT 60
 	#define MEASUREPATH "./Laserdata/Szenario3/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario3/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario3"
 #elif SZENARIO == 4
+/*
+ * Duration of ConvoyTracking: 2219706231ns
+ */
 	#define NUM_MEASUREMENT 100
 	#define MEASUREPATH "./Laserdata/Szenario4/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario4/EML/EML"
