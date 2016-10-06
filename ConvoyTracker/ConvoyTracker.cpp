@@ -534,6 +534,8 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
  */
 void ConvoyTracker::shiftConvoyHistory(double x)
 {
+	std::vector<int> toDelete;
+
 	//update history
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
@@ -544,7 +546,21 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 			it->second.at(i).setX(it->second.at(i).getX() - numIntervals);
 			it->second.at(i).subInvtl -= numIntervals;
 		}
+
+		//check whether current History is already behind our car
+		if(it->second.at(it->second.size()-1).getX() < -5)
+		{
+			//if yes, mark history to delete
+			toDelete.push_back(it->first);
+		}
 	}
+
+	for(uint i=0; i<toDelete.size(); i++)
+	{
+		history.erase(toDelete.at(i));
+	}
+
+	toDelete.clear();
 
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
@@ -556,6 +572,18 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 			convoys.at(i).tracks.at(j).x -= numIntervals;
 			convoys.at(i).tracks.at(j).subIntvl -= numIntervals;
 		}
+
+		if(convoys.at(i).tracks.at(convoys.at(i).tracks.size()-1).x < -5)
+		{
+			toDelete.push_back(i);
+		}
+	}
+
+	for(uint i=0; i<toDelete.size(); i++)
+	{
+		Convoy tmp = convoys.at(convoys.size()-1);
+		convoys.at(toDelete.at(i)) = tmp;
+		convoys.pop_back();
 	}
 }
 
@@ -614,4 +642,16 @@ void ConvoyTracker::visualizeConvoys()
 void ConvoyTracker::visualizeHistory()
 {
 	visualizer.visualizeHistory(EML, history);
+}
+
+bool ConvoyTracker::checkConvoyForDuplicate(double x, Convoy c)
+{
+	for(uint i=0; i<c.tracks.size(); i++)
+	{
+		if(c.tracks.at(i).x == x)
+		{
+			return false;
+		}
+	}
+	return true;
 }
