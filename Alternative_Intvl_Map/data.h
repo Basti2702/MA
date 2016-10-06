@@ -28,7 +28,7 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 4
+#define SZENARIO 1
 
 #if SZENARIO == 1
 /*

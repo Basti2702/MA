@@ -162,10 +162,9 @@ std::vector<PointCell> DataReader::processLaserData(std::string number, double c
 
 	std::cout << "Extracted " << segments.size() << "Objects from Laserdata" << std::endl;
 
+	//parallel für jedes segment
 	std::vector<cartesian_segment> transformedData = doCoordinateTransform(segments);
-	std::cout << "Start PointCloud Visualization" << std::endl;
 	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
-	std::cout << "End PointCloud Visualization" << std::endl;
 	std::vector<PointCell> vehicles = computeVehicleState(transformedData, number);
 
 	return vehicles;
@@ -174,6 +173,7 @@ std::vector<PointCell> DataReader::processLaserData(std::string number, double c
 /*
  * ANMERKUNG: KÖNNTE FÜR GESAMTES ARRAY PARALLEL BERECHNET WERDEN!!
  *
+ *Distance und Threshold im voraus für komplette daten parallel berechnen und in arrays speichern
  */
 double DataReader::computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2)
 {
@@ -238,6 +238,7 @@ std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw
 	return transformedData;
 }
 
+//parallel 1 Thread pro Segment
 std::vector<PointCell> DataReader::computeVehicleState(std::vector<cartesian_segment> segments, std::string number)
 {
 	std::vector<PointCell> vehicles;

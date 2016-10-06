@@ -70,25 +70,29 @@ int main()
 #endif
 
 	ConvoyTracker tracker;
-	auto start = std::chrono::steady_clock::now();
 	std::vector<PointCell> vehicles;
+	long dur[NUM_MEASUREMENT];
+	long compensateHistory[NUM_MEASUREMENT];
+	long compensateData[NUM_MEASUREMENT];
+
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		std::vector<PointCell*> trackedVehicles;
 		std::string number = getNextMeasureAsString(i);
 		tracker.readEMLData(number);
+		auto start = std::chrono::steady_clock::now();
 		vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
-
+		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+	//	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
+		dur[i] = duration.count();
 		//1. Compensate own vehicle motion
 		double deltaX = tracker.getX() - tracker.getXOld();
 		double deltaY = tracker.getY() - tracker.getYOld();
 		double deltaYaw = tracker.getYaw() - tracker.getYawOld();
 
+		start = std::chrono::steady_clock::now();
 		tracker.shiftStructure(deltaX);
 		tracker.rotateStructure(deltaYaw, deltaY);
-
-		tracker.shiftConvoyHistory(deltaX);
-		tracker.rotateConvoyHistory(deltaYaw, deltaY);
 
 		//2. Predict current vehicle states
 		for(uint j = 0; j < tracker.intervalMap.size(); j++)
@@ -96,83 +100,35 @@ int main()
 			tracker.intervalMap.at(j).predict();
 			trackedVehicles.push_back(&tracker.intervalMap.at(j));
 		}
+		duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+		compensateData[i] = duration.count();
 
-	/*	std::vector<pcNode*> toDelete;
-		for(int j = 99; j>=0; j--)
-		{
-			//TODO: move predicted vehicles in right interval and right y s
-			int k = 0;
-			pcNode* tracks = tracker.intervalMap.getPCfromInterval(j,k++);
-			while(tracks != NULL)
-			{
-				//TODO: FIX BUG FOR STANDING CAR (negative x)!!!
-				tracks->vehicle.predict();
-				tracks->y = tracks->vehicle.getY();
-				PointCell pc = tracks->vehicle;
-				//tracker.intervalMap.deletePCfromInterval(j, pc);
-				pcNode* tmp = NULL;
-				if(tracks->vehicle.getX() > j+1-CARINTERVAL)
-				{
-					//vehicle has to be moved
-					tmp = tracker.intervalMap.insertNewTrack(tracks->vehicle);
-					toDelete.push_back(tracks);
-				}
-				if(tmp != NULL)
-				{
-					trackedVehicles.push_back(tmp);
-				}
-				else
-				{
-					//update current node
-					if(tracker.intervalMap.inorderTracks(j) == 1)
-					{
-				//		tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
-						tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
-						trackedVehicles.push_back(tracks);
-					}
-					else
-					{
-						bool rightPos = false;
-						if((tracks->left != NULL && tracks->left->y < tracks->y) || tracks->left == NULL)
-						{
-							//left ok
-							//now check right child
-							if((tracks->right != NULL && tracks->right->y > tracks->y) || tracks->right == NULL)
-							{
-								//right ok -> node still in right position
-								rightPos = true;
-			//					tracks->vehicle.subInvtl += tracks->vehicle.getX() - (j-CARINTERVAL);
-								tracks->vehicle.setX((j-CARINTERVAL) + 0.5);
-								trackedVehicles.push_back(tracks);
-							}
-						}
-						if(!rightPos)
-						{
-							//node is wrong position -> delete PC from tree and add it again
-							toDelete.push_back(tracks);
-							tmp = tracker.intervalMap.insertNewTrack(pc);
-							if(tmp != NULL)
-							{
-								trackedVehicles.push_back(tmp);
-							}
-						}
-
-					}
-				}
-				tracks = tracker.intervalMap.getPCfromInterval(j,k++);
-			}
-			for(uint m = 0; m < toDelete.size(); m++)
-			{
-				tracker.intervalMap.remove(toDelete.at(m), j);
-			}
-			toDelete.clear();
-		}*/
+		start = std::chrono::steady_clock::now();
+		tracker.shiftConvoyHistory(deltaX);
+		tracker.rotateConvoyHistory(deltaYaw, deltaY);
+		duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+		compensateHistory[i] = duration.count();
 		//3. Associate and Update
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
 
 	}
-	auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
-	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
+
+	long sum = 0;
+	long sumH = 0;
+	long sumD = 0;
+
+	for(int i = 0; i< NUM_MEASUREMENT; i++)
+	{
+		sum += dur[i];
+		sumH += compensateHistory[i];
+		sumD += compensateData[i];
+	}
+	sum /= NUM_MEASUREMENT;
+	sumH /= NUM_MEASUREMENT;
+	sumD /= NUM_MEASUREMENT;
+	std::cout << "Duration of Process laserdata: " << sum << std::endl;
+	std::cout << "Duration of compensate Data: " << sumD << std::endl;
+	std::cout << "Duration of compensate History: " << sumH << std::endl;
 	tracker.visualizeConvoys();
 	tracker.visualizeHistory();
 	return 0;
@@ -439,35 +395,48 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
 						if(it1 != currentConvoy.participatingVehicles.end() && it2 != currentConvoy.participatingVehicles.end())
 						{
 							//convoy already exists with both IDS
-							EMLPos newPos;
-							newPos.x = interval+0.5;
-							newPos.y = vehicle.getY();
-							newPos.theta = vehicle.getTheta();
-							newPos.subIntvl = 0.5;
-							convoys.at(j).tracks.push_back(newPos);
+							//check if this x value is already contained
+							if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+							{
+								//x value is not contained
+								EMLPos newPos;
+								newPos.x = interval+0.5;
+								newPos.y = vehicle.getY();
+								newPos.theta = vehicle.getTheta();
+								newPos.subIntvl = 0.5;
+								convoys.at(j).tracks.push_back(newPos);
+							}
 							convoyFound = true;
 							break;
 						}
 						else if (it1 != currentConvoy.participatingVehicles.end())
 						{
-							EMLPos newPos;
-							newPos.x = interval+0.5;
-							newPos.y = vehicle.getY();
-							newPos.theta = vehicle.getTheta();
-							newPos.subIntvl = 0.5;
-							convoys.at(j).tracks.push_back(newPos);
+							//check if this x value is already contained
+							if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+							{
+								EMLPos newPos;
+								newPos.x = interval+0.5;
+								newPos.y = vehicle.getY();
+								newPos.theta = vehicle.getTheta();
+								newPos.subIntvl = 0.5;
+								convoys.at(j).tracks.push_back(newPos);
+							}
 							currentConvoy.participatingVehicles.push_back(vehicle.getID());
 							convoyFound = true;
 							break;
 						}
 						else if (it2 != currentConvoy.participatingVehicles.end())
 						{
-							EMLPos newPos;
-							newPos.x = interval+0.5;
-							newPos.y = vehicle.getY();
-							newPos.theta = vehicle.getTheta();
-							newPos.subIntvl = 0.5;
-							convoys.at(j).tracks.push_back(newPos);
+							//check if this x value is already contained
+							if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+							{
+								EMLPos newPos;
+								newPos.x = interval+0.5;
+								newPos.y = vehicle.getY();
+								newPos.theta = vehicle.getTheta();
+								newPos.subIntvl = 0.5;
+								convoys.at(j).tracks.push_back(newPos);
+							}
 							currentConvoy.participatingVehicles.push_back(pc.getID());
 							convoyFound = true;
 							break;
@@ -500,6 +469,7 @@ void ConvoyTracker::findConvoy(PointCell vehicle)
  */
 void ConvoyTracker::shiftConvoyHistory(double x)
 {
+	std::vector<int> toDelete;
 	//update history
 	for (std::map<int,std::vector<PointCell> >::iterator it=history.begin(); it!=history.end(); ++it)
 	{
@@ -510,7 +480,21 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 			it->second.at(i).setX(it->second.at(i).getX() - numIntervals);
 			it->second.at(i).subInvtl -= numIntervals;
 		}
+
+		//check whether current History is already behind our car
+		if(it->second.at(it->second.size()-1).getX() < -5)
+		{
+			//if yes, mark history to delete
+			toDelete.push_back(it->first);
+		}
 	}
+
+	for(uint i=0; i<toDelete.size(); i++)
+	{
+		history.erase(toDelete.at(i));
+	}
+
+	toDelete.clear();
 
 	//update Convoys
 	for(uint i = 0; i < convoys.size(); i++)
@@ -522,6 +506,18 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 			convoys.at(i).tracks.at(j).x -= numIntervals;
 			convoys.at(i).tracks.at(j).subIntvl -= numIntervals;
 		}
+
+		if(convoys.at(i).tracks.at(convoys.at(i).tracks.size()-1).x < -5)
+		{
+			toDelete.push_back(i);
+		}
+	}
+
+	for(uint i=0; i<toDelete.size(); i++)
+	{
+		Convoy tmp = convoys.at(convoys.size()-1);
+		convoys.at(toDelete.at(i)) = tmp;
+		convoys.pop_back();
 	}
 }
 
@@ -672,4 +668,16 @@ void ConvoyTracker::rotateStructure(double angle, double yMotion) {
 		}
 		intervalMap.at(i) = currentVehicle;
 	}
+}
+
+bool ConvoyTracker::checkConvoyForDuplicate(double x, Convoy c)
+{
+	for(uint i=0; i<c.tracks.size(); i++)
+	{
+		if(c.tracks.at(i).x == x)
+		{
+			return false;
+		}
+	}
+	return true;
 }

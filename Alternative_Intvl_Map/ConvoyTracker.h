@@ -78,6 +78,8 @@ private:
 	std::map<int, std::vector<PointCell> > history;
 	std::vector<Convoy>convoys;
 	std::vector<Pos> EML;
+
+	bool checkConvoyForDuplicate(double x, Convoy c);
 };
 
 #endif /* CONVOYTRACKER_H_ */
