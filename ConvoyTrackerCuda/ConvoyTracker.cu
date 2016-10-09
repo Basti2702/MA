@@ -158,6 +158,11 @@ int main()
 		exit(EXIT_SUCCESS);
 	}
 
+	 if (deviceProp.canMapHostMemory != 1){
+	  fprintf(stderr, "Device cannot map memory!\n");
+	  return 1;
+	}
+
 	if (error != cudaSuccess) {
 		printf(
 				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
@@ -166,6 +171,8 @@ int main()
 		printf("GPU Device %d: \"%s\" with compute capability %d.%d\n\n", devID,
 				deviceProp.name, deviceProp.major, deviceProp.minor);
 	}
+
+	cudaSetDeviceFlags(cudaDeviceMapHost);
 
 /*	PointCell a[5];
 	for(int i=0; i<5; i++)
@@ -286,6 +293,10 @@ int main()
 		std::cout << "PC AFTER2 on CPU X " << a[i].getX() << std::endl;
 	}*/
 
+	cudaEvent_t startEvent, stopEvent;
+	cudaEventCreate(&startEvent);
+	cudaEventCreate(&stopEvent);
+	cudaEventRecord(startEvent, 0);
 	ConvoyTracker tracker;
 	std::vector<PointCellDevice> vehicles;
 	long dur[NUM_MEASUREMENT];
@@ -332,7 +343,8 @@ int main()
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
 
 	}
-
+	cudaEventRecord(stopEvent, 0);
+	cudaEventSynchronize(stopEvent);
 	long sum = 0;
 	long sumH = 0;
 	long sumD = 0;
@@ -349,6 +361,10 @@ int main()
 	std::cout << "Duration of Process laserdata: " << sum << std::endl;
 	std::cout << "Duration of compensate Data: " << sumD << std::endl;
 	std::cout << "Duration of compensate History: " << sumH << std::endl;
+
+	 float time;
+	 cudaEventElapsedTime(&time, startEvent, stopEvent);
+	 std::cout << "Overall Time: " << time << std::endl;
 	tracker.visualizeConvoys();
 	tracker.visualizeHistory();
 	return 0;

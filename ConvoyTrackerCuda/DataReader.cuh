@@ -38,13 +38,22 @@ private:
 	cartesian_segment* d_carSegs;
 	raw_segment* d_rawSegs;
 	laserdata_cartesian* d_carLaser;
+	PointCellDevice* d_vehicles;
+	std::vector<PointCellDevice*> d_vehicleData;
 	std::vector<laserdata_cartesian*> d_carMeasure;
 	std::vector<laserdata_raw*> d_rawMeasure;
 
 	laserdata_raw* d_data;
+	laserdata_raw* d_data_ptr;
+	laserdata_raw* h_data;
 	double* d_dist;
+	double* d_dist_ptr;
 	double* d_thresh;
+	double* d_thresh_ptr;
 	int* d_numSegments;
+
+	double* dist;
+	double* thresh;
 
 	std::vector<raw_segment> segments;
 
