@@ -154,10 +154,22 @@ DataReader::~DataReader() {
 	for(int i=0; i<MAX_SEGMENTS+1; i++)
 	{
 		cudaFreeHost(segments.at(i).measures);
+		cudaFree(d_carMeasure.at(i));
+		cudaFree(d_rawMeasure.at(i));
+		cudaFree(d_vehicleData.at(i));
 	}
 	cudaFreeHost(h_data);
 	cudaFreeHost(dist);
 	cudaFreeHost(thresh);
+	cudaFree(d_data);
+	cudaFree(d_carSegs);
+	cudaFree(d_rawSegs);
+	cudaFree(d_dist);
+	cudaFree(d_thresh);
+	cudaFree(d_index);
+	cudaFree(d_minDistance);
+	cudaFree(d_numSegments);
+	cudaFree(d_vehicles);
 }
 
 __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian* d_laser, unsigned long long* dist)

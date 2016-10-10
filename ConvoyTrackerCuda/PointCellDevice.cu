@@ -7,6 +7,7 @@ PointCellDevice::PointCellDevice()
 {
 //	data = (double*) malloc(260*sizeof(double));
 	initializeMemory();
+	subInvtl = 0.5;
 }
 
 PointCellDevice::~PointCellDevice()

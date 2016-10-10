@@ -18,6 +18,7 @@
 #include "data.cuh"
 #include "PGMReader.cuh"
 #include "PointCell.cuh"
+#include "PointCellDevice.cuh"
 #include "DataVisualizer.cuh"
 
 #include <cuda.h>
@@ -35,8 +36,17 @@ public:
 	std::vector<PointCellDevice> intervalMap;
 
 	//pointer for device
-	PointCell* d_history;
+	PointCellDevice* d_history;
 	EMLPos* d_convoys;
+	PointCellDevice* d_intervalMap;
+
+	double* xSubInterval;
+
+//	std::vector<double*> intervalPointer;
+//	std::vector<double*> historyPointer;
+
+	std::map<int, std::vector<PointCellDevice> > history;
+	std::vector<Convoy>convoys;
 
 	void readEMLData(std::string number);
 	void associateAndUpdate(std::vector<PointCellDevice> vehicles, std::vector<PointCellDevice*> trackedVehicles);
@@ -78,12 +88,9 @@ private:
 	double y, yOld;
 	double yaw, yawOld;
 
-	double xSubInterval;
-
 	DataVisualizer visualizer;
 
-	std::map<int, std::vector<PointCellDevice> > history;
-	std::vector<Convoy>convoys;
+
 	std::vector<Pos> EML;
 
 	bool checkConvoyForDuplicate(double x, Convoy c);
