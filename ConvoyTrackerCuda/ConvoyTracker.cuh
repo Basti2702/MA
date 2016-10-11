@@ -14,6 +14,7 @@
 #include <map>
 #include <algorithm>
 #include <chrono>
+#include <limits.h>
 #include "DataReader.cuh"
 #include "data.cuh"
 #include "PGMReader.cuh"
@@ -34,9 +35,12 @@ public:
 	DataReader reader;
 //	IntervalMap intervalMap;
 	std::vector<PointCellDevice> intervalMap;
+	int setMem[MAX_SEGMENTS];
 
 	//pointer for device
 	PointCellDevice* d_history;
+	PointCellDevice* d_newVeh;
+	int* d_historyMatch;
 	EMLPos* d_convoys;
 	PointCellDevice* d_intervalMap;
 
@@ -95,6 +99,7 @@ private:
 	std::vector<Pos> EML;
 
 	bool checkConvoyForDuplicate(double x, Convoy c);
+	bool checkHistoryForDuplicate(double x, std::vector<PointCellDevice> c);
 };
 
 #endif /* CONVOYTRACKER_H_ */

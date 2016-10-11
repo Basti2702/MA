@@ -20,10 +20,30 @@ ConvoyTracker::ConvoyTracker() {
 	ID = 0;
 	convoyID = 0;
 
+	for(int i=0; i<MAX_SEGMENTS;i++)
+	{
+		setMem[i] = INT_MAX;
+	}
 
 	size_t sizeHist = NUM_HIST;
 	sizeHist *= (MAX_LENGTH_HIST_CONV*sizeof(PointCellDevice));
 	cudaError_t error = cudaMalloc((void **) &d_history, sizeHist);
+	if(error != cudaSuccess)
+	{
+		printf(
+				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaMalloc((void **) &d_historyMatch, MAX_SEGMENTS*sizeof(int));
+	if(error != cudaSuccess)
+	{
+		printf(
+				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaMalloc((void **) &d_newVeh, MAX_SEGMENTS*sizeof(PointCellDevice));
 	if(error != cudaSuccess)
 	{
 		printf(
@@ -134,16 +154,6 @@ std::string getNextMeasureAsString(int i)
 	return number.str();
 }
 
-/*
- * data* = [stateVector | stateCopy | F | P | H | R | K | I ]
- */
-typedef struct pc
-{
-	double* data;
-	double subIntvl;
-	int ID;
-}PC;
-
 __device__ void shiftRotateHistory(PointCellDevice* d_pc, double x, double y, double theta)
 {
 	//update history
@@ -248,6 +258,16 @@ __device__ void computeIntervalMap(PointCellDevice* d_interval, double xMotion, 
 	d_interval->predict();
 }
 
+__device__ bool findHistoryMatch(PointCellDevice* trackedVehicles, PointCellDevice* d_history)
+{
+	bool result = (d_history->getX() - 0.5 <= trackedVehicles->getX());
+	result = result && (d_history->getX() - 0.5 <= trackedVehicles->getX());
+	result = result && (d_history->getY() - 1.0 <= trackedVehicles->getY());
+	result = result && (trackedVehicles->getY() <= d_history->getY() + 1.0);
+
+	return result;
+}
+
 __global__ void compensateEgoMotionMap(PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle)
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
@@ -269,16 +289,29 @@ __global__ void compensateEgoMotion(PointCellDevice* d_history, EMLPos* d_convoy
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
 	shiftRotateHistory(&(d_history[index]), x, y, angle);
-/*	if(blockIdx.x < numConv)
+	if(blockIdx.x < numConv)
 	{
 		shiftRotateConvoy(&(d_convoy[index]), x, y, angle);
 	}
 	if(blockIdx.x < intvlSize)
 	{
-		computeIntervalMap(&(d_interval[blockIdx.x]), x, y, angle, d_subIntvl);
-	}*/
+		if(threadIdx.x == 0)
+		{
+			computeIntervalMap(&(d_interval[blockIdx.x]), x, y, angle, d_subIntvl);
+
+		}
+	}
 }
 
+__global__ void findConvoyDevice(PointCellDevice* trackedVehicles, PointCellDevice* d_history, int* d_historyMatch)
+{
+	int index = blockIdx.y*gridDim.x + blockIdx.x;
+	index = index*blockDim.x + threadIdx.x;
+	if(findHistoryMatch(&(trackedVehicles[blockIdx.y]),&(d_history[index])))
+	{
+		atomicMin(&(d_historyMatch[blockIdx.y]), index);
+	}
+}
 int main()
 {
 #ifdef CREATE_MEASURES
@@ -490,7 +523,7 @@ int main()
 		std::vector<PointCellDevice*> trackedVehicles;
 		std::string number = getNextMeasureAsString(i);
 		tracker.readEMLData(number);
-	/*	auto start = std::chrono::steady_clock::now();
+		/*auto start = std::chrono::steady_clock::now();
 		vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
 		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
 	//	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
@@ -519,10 +552,10 @@ int main()
 		cudaEventRecord(start2Event, 0);
 		tracker.transformDataToDevice();
 	//	tracker.shiftConvoyHistory(deltaX);
-		if(tracker.history.size() > 0)
+		//if(tracker.history.size() > 0)
 		{
 			compensateEgoMotionHistory<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, deltaX, deltaY, deltaYaw);
-	//		compensateEgoMotion<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, tracker.d_intervalMap, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw, tracker.convoys.size(), tracker.intervalMap.size());
+		//	compensateEgoMotion<<<NUM_HIST, MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, tracker.d_intervalMap, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw, tracker.convoys.size(), tracker.intervalMap.size());
 			compensateEgoMotionConvoy<<<tracker.convoys.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_convoys, deltaX, deltaY, deltaYaw);
 		}
 		if(tracker.intervalMap.size() > 0)
@@ -728,6 +761,7 @@ void ConvoyTracker::setYOld(double old) {
 void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, std::vector<PointCellDevice*> trackedVehicles)
 {
 	std::vector<int> indicesToAdd;
+	std::vector<PointCellDevice> convoyCheck;
 	for(uint i = 0; i<vehicles.size(); i++)
 	{
 		double x = vehicles.at(i).getX();
@@ -782,15 +816,18 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			intvl += CARINTERVAL;
 			update->update(vehicles.at(i).data);
 			update->setX((intvl-CARINTERVAL) + 0.5);
-			findConvoy(*update);
-			history.at(update->getID()).push_back(*update);
-
+		//	findConvoy(*update);
+			if(checkHistoryForDuplicate((intvl-CARINTERVAL) + 0.5, history.at(update->getID())))
+			{
+				history.at(update->getID()).push_back(*update);
+			}
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
 
 			std::cout << "Updated vehicle with ID " << update->getID() << std::endl;
 
-			findConvoy(*update);
+			convoyCheck.push_back(*update);
+	//		findConvoy(*update);
 		}
 	}
 
@@ -813,6 +850,68 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 	{
 		intervalMap.push_back(vehicles.at(indicesToAdd.at(k)));
 	}
+
+	cudaError_t err;
+	int counter = 0;
+	int index;
+	size_t size;
+	std::vector<int> toDelete;
+
+	for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
+	{
+		index = counter*MAX_LENGTH_HIST_CONV;
+		size = it->second.size()*sizeof(PointCellDevice);
+		err = cudaMemcpy(&(d_history[index]), it->second.data(), size, cudaMemcpyHostToDevice);
+		if(err != cudaSuccess)
+		{
+			printf(
+				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(err), err, __LINE__);
+		}
+		++counter;
+	}
+	err = cudaMemcpy(d_newVeh, convoyCheck.data(), convoyCheck.size()*sizeof(PointCellDevice), cudaMemcpyHostToDevice);
+	if(err != cudaSuccess)
+	{
+		printf(
+			"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+			cudaGetErrorString(err), err, __LINE__);
+	}
+
+	err = cudaMemcpy(d_historyMatch,setMem, convoyCheck.size()*sizeof(int), cudaMemcpyHostToDevice);
+	if(err != cudaSuccess)
+	{
+		printf(
+			"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+			cudaGetErrorString(err), err, __LINE__);
+	}
+	dim3 grid(history.size(), 5);
+	findConvoyDevice<<<grid, MAX_LENGTH_HIST_CONV>>>(d_newVeh,d_history,d_historyMatch);
+	for(uint i = 0; i < convoys.size(); i++)
+		{
+			index = counter*MAX_LENGTH_HIST_CONV;
+			size = convoys.at(i).tracks.size()*sizeof(EMLPos);
+			err = cudaMemcpy(convoys.at(i).tracks.data(), &(d_convoys[index]), size, cudaMemcpyDeviceToHost);
+			if(err != cudaSuccess)
+			{
+				printf(
+					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+					cudaGetErrorString(err), err, __LINE__);
+			}
+			if(convoys.at(i).tracks.at(convoys.at(i).tracks.size()-1).x < -5)
+			{
+				toDelete.push_back(i);
+			}
+			++counter;
+		}
+
+		Convoy tmp;
+		for(uint i=0; i<toDelete.size(); i++)
+		{
+			tmp = convoys.at(convoys.size()-1);
+			convoys.at(toDelete.at(i)) = tmp;
+			convoys.pop_back();
+		}
 }
 
 void ConvoyTracker::findConvoy(PointCellDevice vehicle)
@@ -1133,6 +1232,18 @@ bool ConvoyTracker::checkConvoyForDuplicate(double x, Convoy c)
 	return true;
 }
 
+bool ConvoyTracker::checkHistoryForDuplicate(double x, std::vector<PointCellDevice> c)
+{
+	for(uint i=0; i<c.size(); i++)
+	{
+		if(c.at(i).getX() == x)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void ConvoyTracker::transformDataToDevice()
 {
 	int counter = 0;
@@ -1230,7 +1341,7 @@ void ConvoyTracker::transformDataFromDevice()
 	toDelete.clear();
 	counter = 0;
 
-	for(uint i = 0; i < convoys.size(); i++)
+/*	for(uint i = 0; i < convoys.size(); i++)
 	{
 		index = counter*MAX_LENGTH_HIST_CONV;
 		size = convoys.at(i).tracks.size()*sizeof(EMLPos);
@@ -1254,7 +1365,7 @@ void ConvoyTracker::transformDataFromDevice()
 		tmp = convoys.at(convoys.size()-1);
 		convoys.at(toDelete.at(i)) = tmp;
 		convoys.pop_back();
-	}
+	}*/
 
 	size = intervalMap.size()*sizeof(PointCellDevice);
 	err = cudaMemcpy(intervalMap.data(), d_intervalMap, size, cudaMemcpyDeviceToHost);
