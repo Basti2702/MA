@@ -19,7 +19,7 @@ ConvoyTracker::ConvoyTracker() {
 	yawOld = 0;
 	ID = 0;
 	convoyID = 0;
-	xSubInterval = 0;
+
 
 	size_t sizeHist = NUM_HIST;
 	sizeHist *= (MAX_LENGTH_HIST_CONV*sizeof(PointCellDevice));
@@ -30,6 +30,14 @@ ConvoyTracker::ConvoyTracker() {
 				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
+
+/*	error = cudaMalloc((void **) &d_subIntvl, sizeof(double));
+		if(error != cudaSuccess)
+		{
+			printf(
+					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+					cudaGetErrorString(error), error, __LINE__);
+		}*/
 
 /*	for(int i=0; i<MAX_LENGTH_HIST_CONV; i++)
 	{
@@ -85,6 +93,14 @@ ConvoyTracker::ConvoyTracker() {
 	}
 
 	error = cudaHostAlloc((void**) &xSubInterval, sizeof(double), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	*xSubInterval = 0;
+
+	error = cudaHostGetDevicePointer(&d_subIntvl_ptr, xSubInterval, 0);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -184,14 +200,19 @@ __device__ void computeIntervalMap(PointCellDevice* d_interval, double xMotion, 
 	*xSubInterval += xMotion;
 	int numIntervals = (int) (*xSubInterval / INTERVALL_LENGTH);
 	*xSubInterval -= numIntervals;
-//	for (int i = 0; i < numIntervals; i++)
-//	{
+	for (int i = 0; i < numIntervals; i++)
+	{
 		double x = d_interval->getX();
 		int interval = floor(x) + CARINTERVAL;
+		if(interval == 0)
+		{
+			//delete content
+			d_interval->setX(-10000);
+			continue;
+		}
 		d_interval->setX(floor(x) - 0.5);
-
-		interval = floor(d_interval->getX());
-//	}
+	}
+	int	interval = floor(d_interval->getX());
 	//1.Step correct directions of stored PCs
 	d_interval->setY(d_interval->getY() - yMotion);
 	d_interval->setTheta(d_interval->getTheta() - angleInRadians);
@@ -223,8 +244,15 @@ __device__ void computeIntervalMap(PointCellDevice* d_interval, double xMotion, 
 	{
 		d_interval->subInvtl -= xAbs;
 	}
+
+	d_interval->predict();
 }
 
+__global__ void compensateEgoMotionMap(PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle)
+{
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+	computeIntervalMap(&(d_interval[index]), x, y, angle, d_subIntvl);
+}
 __global__ void compensateEgoMotionHistory(PointCellDevice* d_history, double x, double y, double angle)
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
@@ -245,10 +273,10 @@ __global__ void compensateEgoMotion(PointCellDevice* d_history, EMLPos* d_convoy
 	{
 		shiftRotateConvoy(&(d_convoy[index]), x, y, angle);
 	}
-	if(blockIdx.x < intvlSize)
+/*	if(blockIdx.x < intvlSize)
 	{
 		computeIntervalMap()
-	}
+	}*/
 }
 
 int main()
@@ -472,7 +500,7 @@ int main()
 		double deltaY = tracker.getY() - tracker.getYOld();
 		double deltaYaw = tracker.getYaw() - tracker.getYawOld();
 
-		start = std::chrono::steady_clock::now();
+/*		start = std::chrono::steady_clock::now();
 		tracker.shiftStructure(deltaX);
 		tracker.rotateStructure(deltaYaw, deltaY);
 
@@ -483,7 +511,7 @@ int main()
 			trackedVehicles.push_back(&tracker.intervalMap.at(j));
 		}
 		duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
-		compensateData[i] = duration.count();
+		compensateData[i] = duration.count();*/
 
 //		start = std::chrono::steady_clock::now();
 		cudaEventRecord(start2Event, 0);
@@ -492,14 +520,19 @@ int main()
 		if(tracker.history.size() > 0)
 		{
 	//		compensateEgoMotionHistory<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, deltaX, deltaY, deltaYaw);
-			compensateEgoMotion<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, deltaX, deltaY, deltaYaw, tracker.convoys.size());
+			compensateEgoMotion<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, deltaX, deltaY, deltaYaw, tracker.convoys.size(), tracker.intervalMap.size());
 		}
-		if(tracker.convoys.size() > 0)
+		if(tracker.intervalMap.size() > 0)
 		{
+			compensateEgoMotionMap<<<1,tracker.intervalMap.size()>>>(tracker.d_intervalMap, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
 //			compensateEgoMotionConvoy<<<tracker.convoys.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_convoys, deltaX, deltaY, deltaYaw);
 		}
 			//	tracker.rotateConvoyHistory(deltaYaw, deltaY);
 		tracker.transformDataFromDevice();
+		for(uint j=0; j<tracker.intervalMap.size();j++)
+		{
+			trackedVehicles.push_back(&tracker.intervalMap.at(j));
+		}
 		cudaEventRecord(stop2Event, 0);
 		cudaEventSynchronize(stop2Event);
 		 float time;
@@ -519,13 +552,13 @@ int main()
 	{
 		sum += dur[i];
 		sumH += compensateHistory[i];
-		sumD += compensateData[i];
+//		sumD += compensateData[i];
 	}
 	sum /= NUM_MEASUREMENT;
 	sumH /= NUM_MEASUREMENT;
-	sumD /= NUM_MEASUREMENT;
+//	sumD /= NUM_MEASUREMENT;
 	std::cout << "Duration of Process laserdata: " << sum << std::endl;
-	std::cout << "Duration of compensate Data: " << sumD << std::endl;
+//	std::cout << "Duration of compensate Data: " << sumD << std::endl;
 	std::cout << "Duration of compensate History: " << sumH << std::endl;
 
 	 float time;
@@ -1214,5 +1247,20 @@ void ConvoyTracker::transformDataFromDevice()
 		printf(
 			"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
 			cudaGetErrorString(err), err, __LINE__);
+	}
+	toDelete.clear();
+	for(uint i=0; i<intervalMap.size();i++)
+	{
+		if(intervalMap.at(i).getX() < -100)
+		{
+			toDelete.push_back(i);
+		}
+	}
+	PointCellDevice tmp2;
+	for(uint i=0; i<toDelete.size();i++)
+	{
+		tmp2 = intervalMap.at(intervalMap.size()-1);
+		intervalMap.at(toDelete.at(i)) = tmp2;
+		intervalMap.pop_back();
 	}
 }

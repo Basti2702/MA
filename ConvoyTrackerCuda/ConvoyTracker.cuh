@@ -41,6 +41,7 @@ public:
 	PointCellDevice* d_intervalMap;
 
 	double* xSubInterval;
+	double* d_subIntvl_ptr;
 
 //	std::vector<double*> intervalPointer;
 //	std::vector<double*> historyPointer;
