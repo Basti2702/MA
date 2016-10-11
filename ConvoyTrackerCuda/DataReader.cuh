@@ -57,6 +57,8 @@ private:
 	double* dist;
 	double* thresh;
 
+	cudaStream_t stream1;
+
 	std::vector<raw_segment> segments;
 
 	void readEMLData(std::string number);

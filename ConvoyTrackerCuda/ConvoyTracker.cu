@@ -265,17 +265,17 @@ __global__ void compensateEgoMotionConvoy(EMLPos* d_convoy, double x, double y, 
 	shiftRotateConvoy(&(d_convoy[index]), x, y, angle);
 }
 
-__global__ void compensateEgoMotion(PointCellDevice* d_history, EMLPos* d_convoy, double x, double y, double angle, int numConv, int intvlSize)
+__global__ void compensateEgoMotion(PointCellDevice* d_history, EMLPos* d_convoy, PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle, int numConv, int intvlSize)
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
 	shiftRotateHistory(&(d_history[index]), x, y, angle);
-	if(blockIdx.x < numConv)
+/*	if(blockIdx.x < numConv)
 	{
 		shiftRotateConvoy(&(d_convoy[index]), x, y, angle);
 	}
-/*	if(blockIdx.x < intvlSize)
+	if(blockIdx.x < intvlSize)
 	{
-		computeIntervalMap()
+		computeIntervalMap(&(d_interval[blockIdx.x]), x, y, angle, d_subIntvl);
 	}*/
 }
 
@@ -490,17 +490,17 @@ int main()
 		std::vector<PointCellDevice*> trackedVehicles;
 		std::string number = getNextMeasureAsString(i);
 		tracker.readEMLData(number);
-		auto start = std::chrono::steady_clock::now();
+	/*	auto start = std::chrono::steady_clock::now();
 		vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
 		auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
 	//	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
-		dur[i] = duration.count();
+		dur[i] = duration.count();*/
 		//1. Compensate own vehicle motion
 		double deltaX = tracker.getX() - tracker.getXOld();
 		double deltaY = tracker.getY() - tracker.getYOld();
 		double deltaYaw = tracker.getYaw() - tracker.getYawOld();
 
-/*		start = std::chrono::steady_clock::now();
+	/*	start = std::chrono::steady_clock::now();
 		tracker.shiftStructure(deltaX);
 		tracker.rotateStructure(deltaYaw, deltaY);
 
@@ -511,21 +511,36 @@ int main()
 			trackedVehicles.push_back(&tracker.intervalMap.at(j));
 		}
 		duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
-		compensateData[i] = duration.count();*/
+		compensateData[i] = duration.count();
 
+		tracker.shiftConvoyHistory(deltaX);
+		tracker.rotateConvoyHistory(deltaYaw, deltaY);*/
 //		start = std::chrono::steady_clock::now();
 		cudaEventRecord(start2Event, 0);
 		tracker.transformDataToDevice();
 	//	tracker.shiftConvoyHistory(deltaX);
 		if(tracker.history.size() > 0)
 		{
-	//		compensateEgoMotionHistory<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, deltaX, deltaY, deltaYaw);
-			compensateEgoMotion<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, deltaX, deltaY, deltaYaw, tracker.convoys.size(), tracker.intervalMap.size());
+			compensateEgoMotionHistory<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, deltaX, deltaY, deltaYaw);
+	//		compensateEgoMotion<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_convoys, tracker.d_intervalMap, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw, tracker.convoys.size(), tracker.intervalMap.size());
+			compensateEgoMotionConvoy<<<tracker.convoys.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_convoys, deltaX, deltaY, deltaYaw);
 		}
 		if(tracker.intervalMap.size() > 0)
 		{
 			compensateEgoMotionMap<<<1,tracker.intervalMap.size()>>>(tracker.d_intervalMap, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
-//			compensateEgoMotionConvoy<<<tracker.convoys.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_convoys, deltaX, deltaY, deltaYaw);
+			auto start = std::chrono::steady_clock::now();
+			vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
+			auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+		//	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
+			dur[i] = duration.count();
+		}
+		else
+		{
+			auto start = std::chrono::steady_clock::now();
+			vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
+			auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+		//	std::cout << "Duration of ConvoyTracking: " << duration.count() << std::endl;
+			dur[i] = duration.count();
 		}
 			//	tracker.rotateConvoyHistory(deltaYaw, deltaY);
 		tracker.transformDataFromDevice();
@@ -564,6 +579,7 @@ int main()
 	 float time;
 	 cudaEventElapsedTime(&time, startEvent, stopEvent);
 	 std::cout << "Overall Time: " << time << std::endl;
+	 std::cout << tracker.convoys.at(0).tracks.size() << std::endl;
 	tracker.visualizeConvoys();
 	tracker.visualizeHistory();
 	return 0;

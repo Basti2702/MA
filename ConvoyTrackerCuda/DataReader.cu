@@ -11,6 +11,7 @@
 DataReader::DataReader() {
 	// TODO Auto-generated constructor stub
 	cudaError_t error;
+	cudaStreamCreate(&stream1);
 	segments = std::vector<raw_segment>(MAX_SEGMENTS+1);
 	for(int i=0; i<MAX_SEGMENTS+1; i++)
 	{
@@ -23,19 +24,19 @@ DataReader::DataReader() {
 	}
 
 
-	error = cudaHostAlloc((void**) &h_data, NUMBER_LASERRAYS*sizeof(laserdata_raw), cudaHostAllocMapped);
+	error = cudaHostAlloc((void**) &h_data, NUMBER_LASERRAYS*sizeof(laserdata_raw), cudaHostAllocDefault);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &dist, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocMapped);
+	error = cudaHostAlloc((void**) &dist, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocDefault);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &thresh, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocMapped);
+	error = cudaHostAlloc((void**) &thresh, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocDefault);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -130,7 +131,7 @@ DataReader::DataReader() {
 
 
 
-		/*size_t size_struct = NUMBER_LASERRAYS*sizeof(laserdata_raw);
+		size_t size_struct = NUMBER_LASERRAYS*sizeof(laserdata_raw);
 		size_t size_double = (NUMBER_LASERRAYS - 1)*sizeof(double);
 		error = cudaMalloc((void **) &d_data, size_struct);
 		if (error != cudaSuccess) {
@@ -146,7 +147,7 @@ DataReader::DataReader() {
 		if (error != cudaSuccess) {
 			printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 					cudaGetErrorString(error), error, __LINE__);
-		}*/
+		}
 }
 
 DataReader::~DataReader() {
@@ -170,6 +171,7 @@ DataReader::~DataReader() {
 	cudaFree(d_minDistance);
 	cudaFree(d_numSegments);
 	cudaFree(d_vehicles);
+	cudaStreamDestroy(stream1);
 }
 
 __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian* d_laser, unsigned long long* dist)
@@ -583,9 +585,10 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 
 	cudaError_t error;
 
+	size_t size_struct = numElements*sizeof(laserdata_raw);
 
-//	error = cudaMemcpy(d_data, h_data, size_struct, cudaMemcpyHostToDevice);
-	error = cudaHostGetDevicePointer(&d_data_ptr, h_data, 0);
+	error = cudaMemcpyAsync(d_data, h_data, size_struct, cudaMemcpyHostToDevice,stream1);
+/*	error = cudaHostGetDevicePointer(&d_data_ptr, h_data, 0);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -601,27 +604,27 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
-	}
-
-	processData<<<1,numElements-1>>>(d_data_ptr, d_rawSegs, d_carSegs, d_dist_ptr, d_thresh_ptr, numElements, d_numSegments);
-
-/*	error = cudaMemcpy(dist, d_dist, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
-	}
-	error = cudaMemcpy(thresh, d_thresh, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
 	}*/
+
+	processData<<<1,numElements-1,0,stream1>>>(d_data, d_rawSegs, d_carSegs, d_dist, d_thresh, numElements, d_numSegments);
+
+	error = cudaMemcpyAsync(dist, d_dist, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost,stream1);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+	error = cudaMemcpyAsync(thresh, d_thresh, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost,stream1);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
 /*	error = cudaMemcpy(&h_numSegments, d_numSegments, sizeof(int), cudaMemcpyDeviceToHost);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}*/
 
-	cudaDeviceSynchronize();
+	cudaStreamSynchronize(stream1);
 
 	cudaEventRecord(startEvent, 0);
 	int segment_counter = 0;
