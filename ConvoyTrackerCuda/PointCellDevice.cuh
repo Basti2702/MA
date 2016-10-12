@@ -30,8 +30,8 @@ public:
 
 	__host__ __device__ void predict();
 	void update(double* newState);
-	int getID();
-	void setID(int id);
+	__host__ __device__ int getID();
+	__host__ __device__ void setID(int id);
 	__host__ __device__ double getX();
 	__host__ __device__ double getY();
 	__host__ __device__ double getTheta();

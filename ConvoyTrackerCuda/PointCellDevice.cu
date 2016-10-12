@@ -333,11 +333,11 @@ void PointCellDevice::update(double* newState)
 	}
 
 }
-int PointCellDevice::getID()
+__host__ __device__ int PointCellDevice::getID()
 {
 	return ID;
 }
-void PointCellDevice::setID(int id)
+__host__ __device__ void PointCellDevice::setID(int id)
 {
 	ID = id;
 }

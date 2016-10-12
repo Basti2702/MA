@@ -41,6 +41,7 @@ public:
 	PointCellDevice* d_history;
 	PointCellDevice* d_newVeh;
 	int* d_historyMatch;
+	int* h_historyMatch;
 	EMLPos* d_convoys;
 	PointCellDevice* d_intervalMap;
 
