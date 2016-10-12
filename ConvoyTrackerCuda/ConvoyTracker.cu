@@ -19,6 +19,8 @@ ConvoyTracker::ConvoyTracker() {
 	yawOld = 0;
 	ID = 0;
 	convoyID = 0;
+	currentHistoryOnDevice = false;
+	currentConvoyOnDevice = false;
 
 	for(int i=0; i<MAX_SEGMENTS;i++)
 	{
@@ -713,7 +715,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			newHist.push_back(vehicles.at(i));
 			history.insert(std::pair<int, std::vector<PointCellDevice> > (ID, newHist));
 			std::cout << "Added new Vehicle with ID " << ID << std::endl;
-
+			currentHistoryOnDevice = false;
 //			findConvoy(vehicles.at(i));
 		}
 		else
@@ -730,6 +732,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			if(checkHistoryForDuplicate((intvl-CARINTERVAL) + 0.5, history.at(update->getID())))
 			{
 				history.at(update->getID()).push_back(*update);
+				currentHistoryOnDevice = false;
 			}
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
@@ -738,7 +741,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 			convoyCheck.push_back(*update);
 	//		std::cout << "ConvoyCheck with ID " << update->getID() << std::endl;
-//			findConvoy(*update);
+	//		findConvoy(*update);
 		}
 	}
 
@@ -771,18 +774,22 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 		std::vector<int> toDelete;
 		//initialize all IDs in possible history to -1 to have no false detection in findConvoy
 		memSetHistory<<<NUM_HIST, MAX_LENGTH_HIST_CONV>>>(d_history);
-		for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
+//		if(!currentHistoryOnDevice)
 		{
-			index = counter*MAX_LENGTH_HIST_CONV;
-			size = it->second.size()*sizeof(PointCellDevice);
-			err = cudaMemcpy(&(d_history[index]), it->second.data(), size, cudaMemcpyHostToDevice);
-			if(err != cudaSuccess)
+			for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
 			{
-				printf(
-					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(err), err, __LINE__);
+				index = counter*MAX_LENGTH_HIST_CONV;
+				size = it->second.size()*sizeof(PointCellDevice);
+				err = cudaMemcpy(&(d_history[index]), it->second.data(), size, cudaMemcpyHostToDevice);
+				if(err != cudaSuccess)
+				{
+					printf(
+							"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+							cudaGetErrorString(err), err, __LINE__);
+				}
+				++counter;
 			}
-			++counter;
+			currentHistoryOnDevice = true;
 		}
 		err = cudaMemcpy(d_newVeh, convoyCheck.data(), convoyCheck.size()*sizeof(PointCellDevice), cudaMemcpyHostToDevice);
 		if(err != cudaSuccess)
@@ -893,6 +900,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					newConvoy.tracks.push_back(newPos);
 					convoys.push_back(newConvoy);
 				}
+				currentConvoyOnDevice = false;
 			}
 		}
 	}
@@ -991,6 +999,7 @@ void ConvoyTracker::findConvoy(PointCellDevice vehicle)
 						newConvoy.tracks.push_back(newPos);
 						convoys.push_back(newConvoy);
 					}
+					currentConvoyOnDevice = false;
 					return;
 				}
 			}
@@ -1234,33 +1243,39 @@ void ConvoyTracker::transformDataToDevice()
 	int index;
 	size_t size;
 	cudaError_t err;
-	for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
+	if(!currentHistoryOnDevice)
 	{
-		index = counter*MAX_LENGTH_HIST_CONV;
-		size = it->second.size()*sizeof(PointCellDevice);
-		err = cudaMemcpy(&(d_history[index]), it->second.data(), size, cudaMemcpyHostToDevice);
-		if(err != cudaSuccess)
+		for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
 		{
-			printf(
-				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(err), err, __LINE__);
+			index = counter*MAX_LENGTH_HIST_CONV;
+			size = it->second.size()*sizeof(PointCellDevice);
+			err = cudaMemcpy(&(d_history[index]), it->second.data(), size, cudaMemcpyHostToDevice);
+			if(err != cudaSuccess)
+			{
+				printf(
+					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+					cudaGetErrorString(err), err, __LINE__);
+			}
+			++counter;
 		}
-		++counter;
+		currentHistoryOnDevice = true;
 	}
-
-	for(uint i = 0; i < convoys.size(); i++)
+	if(!currentConvoyOnDevice)
 	{
-		index = i*MAX_LENGTH_HIST_CONV;
-		size = convoys.at(i).tracks.size()*sizeof(EMLPos);
-		err = cudaMemcpy(&(d_convoys[index]), convoys.at(i).tracks.data(), size, cudaMemcpyHostToDevice);
-		if(err != cudaSuccess)
+		for(uint i = 0; i < convoys.size(); i++)
 		{
-			printf(
-				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(err), err, __LINE__);
+			index = i*MAX_LENGTH_HIST_CONV;
+			size = convoys.at(i).tracks.size()*sizeof(EMLPos);
+			err = cudaMemcpy(&(d_convoys[index]), convoys.at(i).tracks.data(), size, cudaMemcpyHostToDevice);
+			if(err != cudaSuccess)
+			{
+				printf(
+					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+					cudaGetErrorString(err), err, __LINE__);
+			}
 		}
+		currentConvoyOnDevice = true;
 	}
-
 	/*size = intervalMap.size()*sizeof(PointCellDevice);
 	err = cudaMemcpy(d_intervalMap, intervalMap.data(), size, cudaMemcpyHostToDevice);
 	if(err != cudaSuccess)
@@ -1320,6 +1335,7 @@ void ConvoyTracker::transformDataFromDevice()
 	for(uint i=0; i<toDelete.size(); i++)
 	{
 		history.erase(toDelete.at(i));
+		currentHistoryOnDevice = false;
 	}
 
 	toDelete.clear();
@@ -1339,6 +1355,7 @@ void ConvoyTracker::transformDataFromDevice()
 		if(convoys.at(i).tracks.at(convoys.at(i).tracks.size()-1).x < -5)
 		{
 			toDelete.push_back(i);
+			currentConvoyOnDevice = false;
 		}
 		++counter;
 	}

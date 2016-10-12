@@ -94,6 +94,8 @@ private:
 	double y, yOld;
 	double yaw, yawOld;
 
+	bool currentHistoryOnDevice;
+	bool currentConvoyOnDevice;
 	DataVisualizer visualizer;
 
 
