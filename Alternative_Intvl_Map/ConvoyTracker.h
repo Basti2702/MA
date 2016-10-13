@@ -80,6 +80,7 @@ private:
 	std::vector<Pos> EML;
 
 	bool checkConvoyForDuplicate(double x, Convoy c);
+	bool checkHistoryForDuplicate(double x, std::vector<PointCell> c);
 };
 
 #endif /* CONVOYTRACKER_H_ */

@@ -331,8 +331,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCell> vehicles, std::vec
 			intvl += CARINTERVAL;
 			update->update(vehicles.at(i).stateVector);
 			update->setX((intvl-CARINTERVAL) + 0.5);
-			findConvoy(*update);
-			history.at(update->getID()).push_back(*update);
+			if(checkHistoryForDuplicate((intvl-CARINTERVAL) + 0.5, history.at(update->getID())))
+			{
+				history.at(update->getID()).push_back(*update);
+			}
 
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
@@ -675,6 +677,19 @@ bool ConvoyTracker::checkConvoyForDuplicate(double x, Convoy c)
 	for(uint i=0; i<c.tracks.size(); i++)
 	{
 		if(c.tracks.at(i).x == x)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+bool ConvoyTracker::checkHistoryForDuplicate(double x, std::vector<PointCell> c)
+{
+	for(uint i=0; i<c.size(); i++)
+	{
+		if(c.at(i).getX() == x)
 		{
 			return false;
 		}
