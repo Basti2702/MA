@@ -31,7 +31,7 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 1
+#define SZENARIO 5
 
 #if SZENARIO == 1
 /*
@@ -65,8 +65,12 @@
 	#define MEASUREPATH "./Laserdata/Szenario4/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario4/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario4"
+#elif SZENARIO == 5
+	#define NUM_MEASUREMENT 1000
+	#define MEASUREPATH "./Laserdata/Szenario5/Measure/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario5/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario5"
 #endif
-
 
 
 typedef struct laserdata_raw{

@@ -219,7 +219,7 @@ void PGMReader::simulateLaserRays(std::string number)
 
 	measurePath.clear();
 	measurePath.str("");
-#if SZENARIO == 1
+#if SZENARIO == 1 || SZENARIO == 5
 	measurePath << MEASUREPATH << "0000.pgm";
 #elif SZENARIO == 4
 	if(counter < 30)
