@@ -60,7 +60,7 @@ int main()
 		std::string number = getNextMeasureAsString(i);
 		pgmReader.simulateLaserRays(number);
 
-	/*	std::ofstream EMLMeasureFile;
+		/*std::ofstream EMLMeasureFile;
 		std::ostringstream measurePath;
 		measurePath << "./Laserdata/EML" << number << ".txt";
 		EMLMeasureFile.open (measurePath.str().c_str());
@@ -572,6 +572,7 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 
 void ConvoyTracker::visualizeConvoys()
 {
+	std::cout << convoys.at(0).tracks.size() << std::endl;
 	visualizer.visualizeConvoys(EML, convoys);
 }
 

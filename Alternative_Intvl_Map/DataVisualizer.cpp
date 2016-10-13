@@ -149,8 +149,8 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 			xOnCanvas = CANVASSIZE;
 			yOnCanvas = CANVASSIZE/2;
 
-			xOnCanvas -= ((x + lastPos.x) * CANVASFACTOR);
-			yOnCanvas += ((y + lastPos.y) * CANVASFACTOR);
+			xOnCanvas -= ((x + lastPos.x));
+			yOnCanvas += ((y + lastPos.y));
 
 			myfile << yOnCanvas << "," << xOnCanvas << " ";
 
@@ -167,8 +167,8 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 		xOnCanvas = CANVASSIZE;
 		yOnCanvas = CANVASSIZE/2;
 
-		xOnCanvas -= ((curPos.x) * CANVASFACTOR);
-		yOnCanvas += ((curPos.y) * CANVASFACTOR);
+		xOnCanvas -= ((curPos.x));
+		yOnCanvas += ((curPos.y));
 
 		myfile << yOnCanvas << "," << xOnCanvas << " ";
 	}

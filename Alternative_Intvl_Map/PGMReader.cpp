@@ -151,14 +151,14 @@ double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             if(x1 < 0 || x1 > numRow || y1 < 0 || y1 > numCol)
             {
             	//out of bounds
-            	fprintf(stdout, "Laser out of bound!\n");
+     //       	fprintf(stdout, "Laser out of bound!\n");
             	return 501.0;
             }
             else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
             	double distance = sqrt((startX-x1)*(startX-x1) + (startY-y1)*(startY-y1));
-            	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
+     //       	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
             	return distance;
             }
 //            plot(x1, y1);
@@ -186,14 +186,14 @@ double PGMReader::bresenham(int** image, int x1, int y1, int x2, int y2)
             if(x1 < 0 || x1 > numRow || y1 < 0 || y1 > numCol)
             {
             	//out of bounds
-            	fprintf(stdout, "Laser out of bound!\n");
+     //       	fprintf(stdout, "Laser out of bound!\n");
             	return 501.0;
             }
             else if(image[x1][y1] != max_grey)
             {
             	//obstacle hit
             	double distance = sqrt((startX-x1)*(startX-x1) + (startY-y1)*(startY-y1));
-            	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
+      //      	fprintf(stdout, "Obstacle hit at x = %d, y = %d distance: %f\n", x1, y1, distance);
             	return distance;
             }
        //     plot(x1, y1);
@@ -219,7 +219,7 @@ void PGMReader::simulateLaserRays(std::string number)
 
 	measurePath.clear();
 	measurePath.str("");
-#if SZENARIO == 1
+#if SZENARIO == 1 || SZENARIO == 5
 	measurePath << MEASUREPATH << "0000.pgm";
 #elif SZENARIO == 4
 	if(counter < 30)
@@ -262,7 +262,7 @@ void PGMReader::simulateLaserRays(std::string number)
 		double angleInRadians = angle*M_PI/180.0;
 		double endX = vecX * cos(angleInRadians) + vecY* sin(angleInRadians);
 		double endY = -vecX * sin(angleInRadians) + vecY* cos(angleInRadians);
-		fprintf(stdout, "Angle: %f, Resulting X = %f Y = %f\n", angle, endX, endY);
+//		fprintf(stdout, "Angle: %f, Resulting X = %f Y = %f\n", angle, endX, endY);
 
 		//vector should point to the left side for negative values
 		int stepsToBorder;
@@ -312,7 +312,7 @@ void PGMReader::simulateLaserRays(std::string number)
 		//simulate uncertainty in measure up to +-10%
 		double uncertainty = rand() % 10 +1;
 		uncertainty /= 1000.0;
-		fprintf(stdout, "Unsicherheit: %f", uncertainty);
+//		fprintf(stdout, "Unsicherheit: %f", uncertainty);
 		int sign = rand() % 2;
 		if(sign)
 		{
