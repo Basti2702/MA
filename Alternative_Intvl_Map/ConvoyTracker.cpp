@@ -515,11 +515,13 @@ void ConvoyTracker::shiftConvoyHistory(double x)
 		}
 	}
 
-	for(uint i=0; i<toDelete.size(); i++)
+	if(toDelete.size() > 0)
 	{
-		Convoy tmp = convoys.at(convoys.size()-1);
-		convoys.at(toDelete.at(i)) = tmp;
-		convoys.pop_back();
+		for(int i=toDelete.size()-1; i >= 0; i--)
+		{
+			convoys.at(toDelete.at(i)) = convoys.at(convoys.size()-1);
+			convoys.pop_back();
+		}
 	}
 }
 

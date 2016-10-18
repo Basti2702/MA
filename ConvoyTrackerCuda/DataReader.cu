@@ -582,7 +582,11 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	float time;
 	cudaEventElapsedTime(&time, startEvent, stopEvent);
 	std::cout << "Read data Time: " << time << std::endl;
-
+	if(numElements < 3)
+	{
+		std::vector<PointCellDevice> vehicles;
+		return vehicles;
+	}
 	cudaError_t error;
 
 	size_t size_struct = numElements*sizeof(laserdata_raw);
