@@ -734,6 +734,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 				history.at(update->getID()).push_back(*update);
 				currentHistoryOnDevice = false;
 			}
+			if(history.at(update->getID()).size() > MAX_LENGTH_HIST_CONV)
+			{
+				history.at(update->getID()).erase(history.at(update->getID()).begin());
+			}
 			trackedVehicles.at(minIndex) = tmp;
 			trackedVehicles.pop_back();
 
@@ -849,6 +853,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							newPos.subIntvl = 0.5;
 							convoys.at(j).tracks.push_back(newPos);
 						}
+						if(convoys.at(j).tracks.size() > MAX_LENGTH_HIST_CONV)
+						{
+							convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
+						}
 						convoyFound = true;
 						break;
 					}
@@ -863,6 +871,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							newPos.theta = vehicle.getTheta();
 							newPos.subIntvl = 0.5;
 							convoys.at(j).tracks.push_back(newPos);
+						}
+						if(convoys.at(j).tracks.size() > MAX_LENGTH_HIST_CONV)
+						{
+							convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
 						}
 						currentConvoy.participatingVehicles.push_back(vehicle.getID());
 						convoyFound = true;
@@ -879,6 +891,10 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							newPos.theta = vehicle.getTheta();
 							newPos.subIntvl = 0.5;
 							convoys.at(j).tracks.push_back(newPos);
+						}
+						if(convoys.at(j).tracks.size() > MAX_LENGTH_HIST_CONV)
+						{
+							convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
 						}
 						currentConvoy.participatingVehicles.push_back(id1);
 						convoyFound = true;
