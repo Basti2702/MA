@@ -215,10 +215,6 @@ __global__ void extractVehicles(laserdata_cartesian* d_laser, PointCellDevice* d
 	double nearestWidthRight = fabs(d_laser[blockIdx.x+1].y - d_laser[blockIdx.x+2].y);
 	//compute orientation of object regarding to the driving direction of our own car
 	//own direction vector(x,y): (1,0)
-/*	std::cout << i << std::endl;
-	std::cout << "left x = " << relevantPoints[0].x << " y = " << relevantPoints[0].y << std::endl;
-	std::cout << "nearest x = " << relevantPoints[1].x << " y = " << relevantPoints[1].y << std::endl;
-	std::cout << "right x = " << relevantPoints[2].x << " y = " << relevantPoints[2].y << std::endl;*/
 
 	if(length > 2)
 	{
@@ -234,12 +230,6 @@ __global__ void extractVehicles(laserdata_cartesian* d_laser, PointCellDevice* d
 
 	//objects should not be classified as vehicle if their orientation is bigger than 45°
 	//real vehicles should never be rotated over that value
-
-	/*	std::cout << "Theta: " << theta << std::endl;
-		std::cout << "ThetaLeft: " << thetaLeft << std::endl;
-		std::cout << "ThetaRight: " << thetaRight << std::endl;
-		std::cout << "Length: " << length << std::endl;
-		std::cout << "Width: " << width << std::endl;*/
 
 	//the detected car probably is defined with the points that form the biggest angle and are wider than 1m
 	int points = 0;
@@ -316,21 +306,13 @@ __device__ int segmentData(laserdata_raw* data, raw_segment* rawSegs, double* di
 {
 	int segment_counter = 0;
 	int data_counter = 0;
-	//oldMeasure = data[0];
 	//first point automatically is part of the first segment;
 	rawSegs[MAX_SEGMENTS].numberOfMeasures = 1;
 	rawSegs[MAX_SEGMENTS].measures[0] = data[0];
-//	cudaThreadSynchronize();
-//	cudaMemcpy(dist, d_dist, size_double, cudaMemcpyDeviceToHost);
-//	cudaMemcpy(thresh, d_thresh, size_double, cudaMemcpyDeviceToHost);
-//	cudaFree(d_data);
-//	cudaFree(d_dist);
-//	cudaFree(d_thresh);
+
 	//iterate over all measures
 	for(int i=1; i<numElements; i++)
 	{
-		//currentMeasure = data[i];
-	//	std::cout << "Distance " << dist[i-1] << " Threshold " << thresh[i-1] << std::endl;
 		if(dist[i-1] <= threshold[i-1])
 		{
 			//add current point in existing segment
@@ -487,7 +469,9 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 {
 	std::ostringstream measurePath;
 	measurePath << MEASUREPATH << number << ".txt";
+#ifdef PRINT
 	std::cout << measurePath.str() << std::endl;
+#endif
     std::ifstream input(measurePath.str().c_str());
     std::string line;
     int counter = 0;
@@ -504,17 +488,10 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 	 */
 	double angle = -72.5;
 
-    //Skip first 581 lines, just read out the second level of datas
-  /*  while(counter < NUMBER_LASERRAYS && std::getline( input, line )) {
-    	++counter;
-  //  	std::cout<< counter <<'\n';
-    }*/
-
     //now read the data we are interested in
     counter = 0;
     int lineCounter = 0;
     while( std::getline( input, line ) && lineCounter < NUMBER_LASERRAYS ) {
-    	//std::cout<<line<<'\n';
     	std::stringstream ss;
 
     	ss << line;
@@ -545,7 +522,6 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
     					data[counter].distance = atof(segment.c_str());
     			    	break;
     				}
-    		//		std::cout<<segment << ' ';
             		++datacnt;
     			}
     		}
@@ -553,13 +529,14 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
     	if(valid)
     	{
     		data[counter].angle = angle;
-    //		std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
 	    	++counter;
     	}
     	angle += 0.25;
     	++lineCounter;
     }
+#ifdef PRINT
     std::cout << counter << std::endl;
+#endif
     return counter;
 }
 /**
@@ -572,16 +549,8 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	this->currentYawRate = currentYawRate;
 
 	//read new data from file
-	cudaEvent_t startEvent, stopEvent;
-	cudaEventCreate(&startEvent);
-	cudaEventCreate(&stopEvent);
-	cudaEventRecord(startEvent, 0);
 	int numElements = getLaserData(h_data, number);
-	cudaEventRecord(stopEvent, 0);
-	cudaEventSynchronize(stopEvent);
-	float time;
-	cudaEventElapsedTime(&time, startEvent, stopEvent);
-	std::cout << "Read data Time: " << time << std::endl;
+
 	if(numElements < 3)
 	{
 		std::vector<PointCellDevice> vehicles;
@@ -592,23 +561,6 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	size_t size_struct = numElements*sizeof(laserdata_raw);
 
 	error = cudaMemcpyAsync(d_data, h_data, size_struct, cudaMemcpyHostToDevice,stream1);
-/*	error = cudaHostGetDevicePointer(&d_data_ptr, h_data, 0);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
-	}
-
-	error = cudaHostGetDevicePointer(&d_dist_ptr, dist, 0);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
-	}
-
-	error = cudaHostGetDevicePointer(&d_thresh_ptr, thresh, 0);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
-	}*/
 
 	processData<<<1,numElements-1,0,stream1>>>(d_data, d_rawSegs, d_carSegs, d_dist, d_thresh, numElements, d_numSegments);
 
@@ -622,15 +574,9 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
-/*	error = cudaMemcpy(&h_numSegments, d_numSegments, sizeof(int), cudaMemcpyDeviceToHost);
-	if (error != cudaSuccess) {
-		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-				cudaGetErrorString(error), error, __LINE__);
-	}*/
 
 	cudaStreamSynchronize(stream1);
 
-	cudaEventRecord(startEvent, 0);
 	int segment_counter = 0;
 	int data_counter = 0;
 
@@ -674,9 +620,9 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 		}
 		++segment_counter;
 	}
-
+#ifdef PRINT
 	printf("Extracted %d Objects from Laserdata\n", segment_counter);
-
+#endif
 	error = cudaMemcpy(d_rawSegs, segments.data(), segment_counter*sizeof(raw_segment), cudaMemcpyHostToDevice);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
@@ -696,14 +642,10 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 					cudaGetErrorString(error), error, __LINE__);
 		}
 	}
-	cudaEventRecord(stopEvent, 0);
-	cudaEventSynchronize(stopEvent);
-	cudaEventElapsedTime(&time, startEvent, stopEvent);
-	std::cout << "segment data Time: " << time << std::endl;
+
 	coordinateTransform<<<segment_counter,NUMBER_LASERRAYS>>>(d_rawSegs, d_carSegs);
 	std::vector<cartesian_segment> transformedData(segment_counter);
 	cudaDeviceSynchronize();
-	cudaEventRecord(startEvent, 0);
 	error = cudaMemcpy(transformedData.data(), d_carSegs, segment_counter*sizeof(cartesian_segment), cudaMemcpyDeviceToHost);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
@@ -720,24 +662,11 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 					cudaGetErrorString(error), error, __LINE__);
 		}
 	}
-/*	unsigned int x = 0;
-	unsigned long long max = 1000000;
-	cudaMemcpy(d_minDistance, &max, sizeof(unsigned long long), cudaMemcpyHostToDevice);
-	getRelevantMeas<<<segment_counter, NUMBER_LASERRAYS>>>(d_carSegs,d_carLaser,d_minDistance);
-	cudaMemcpy(d_index, &x, sizeof(unsigned int), cudaMemcpyHostToDevice);
-	extractVehicles<<<segment_counter,1>>>(d_carLaser,d_vehicles, d_index, currentSpeed, currentYawRate);
-	cudaMemcpy(&x,d_index, sizeof(unsigned int), cudaMemcpyDeviceToHost);*/
-	//visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
+
 	std::vector<PointCellDevice> vehicles = computeVehicleState(transformedData, number);
-//	for(uint i=0; i<x;i++)
-//	{
-//		cudaMemcpy(vehicles.data(),d_vehicles, x*sizeof(PointCellDevice), cudaMemcpyDeviceToHost);
-//	}
-	cudaEventRecord(stopEvent, 0);
-	cudaEventSynchronize(stopEvent);
-	cudaEventElapsedTime(&time, startEvent, stopEvent);
-//	std::cout << "extraction data Time: " << time << std::endl;
-//	std::cout << "Extracted "  << x << " cars from data" << std::endl;
+#ifdef PRINT
+	std::cout << "Extracted "  << x << " cars from data" << std::endl;
+#endif
 	return vehicles;
 }
 
@@ -846,10 +775,6 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(std::vector<cartesi
 		double nearestWidthRight = fabs(relevantPoints[1].y - relevantPoints[2].y);
 		//compute orientation of object regarding to the driving direction of our own car
 		//own direction vector(x,y): (1,0)
-	/*	std::cout << i << std::endl;
-		std::cout << "left x = " << relevantPoints[0].x << " y = " << relevantPoints[0].y << std::endl;
-		std::cout << "nearest x = " << relevantPoints[1].x << " y = " << relevantPoints[1].y << std::endl;
-		std::cout << "right x = " << relevantPoints[2].x << " y = " << relevantPoints[2].y << std::endl;*/
 
 		if(length > 2)
 		{
@@ -865,12 +790,6 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(std::vector<cartesi
 
 		//objects should not be classified as vehicle if their orientation is bigger than 45°
 		//real vehicles should never be rotated over that value
-
-		/*	std::cout << "Theta: " << theta << std::endl;
-			std::cout << "ThetaLeft: " << thetaLeft << std::endl;
-			std::cout << "ThetaRight: " << thetaRight << std::endl;
-			std::cout << "Length: " << length << std::endl;
-			std::cout << "Width: " << width << std::endl;*/
 
 		//the detected car probably is defined with the points that form the biggest angle and are wider than 1m
 		int points = 0;
@@ -941,7 +860,9 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(std::vector<cartesi
 			toPlot.push_back(relevantPoints);
 		}
 	}
+#ifdef PRINT
 	std::cout<<"Extracted " << toPlot.size() << " Vehicles from Data" << std::endl;
+#endif
 	visualizer.visualizeVehiclesAsRectangle(toPlot, number);
 	return vehicles;
 }

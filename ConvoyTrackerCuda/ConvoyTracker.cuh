@@ -13,7 +13,6 @@
 #include <exception>
 #include <map>
 #include <algorithm>
-#include <chrono>
 #include <limits.h>
 #include "DataReader.cuh"
 #include "data.cuh"
@@ -43,7 +42,6 @@ public:
 	int* d_historyMatch;
 	int* h_historyMatch;
 	EMLPos* d_convoys;
-	PointCellDevice* d_intervalMap;
 
 	double* xSubInterval;
 	double* d_subIntvl_ptr;

@@ -19,6 +19,8 @@
 #define NUM_HIST 196
 #define NUM_CONV 20
 #define MAX_SEGMENTS 194
+
+//#define PRINT
 //#define CREATE_MEASURES
 
 /**
