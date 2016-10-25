@@ -1,0 +1,8 @@
+The main file is "Thesis.tex".
+
+In order to compile your report, use the following commands:
+
+make       -- will generate a DVI file
+make ps    -- will generate DVI and Postscript (PS) files
+make pdf   -- will generate DVI, PS, and PDF files
+make all   -- same as "make pdf"
