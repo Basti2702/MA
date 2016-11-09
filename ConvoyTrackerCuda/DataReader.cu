@@ -418,28 +418,10 @@ __global__ void coordinateTransform(raw_segment* rawSegs, cartesian_segment* car
 {
 	doCoordinateTransformDevice(rawSegs, carSegs, blockIdx.x, threadIdx.x);
 }
-__global__ void processData(laserdata_raw* data, raw_segment* rawSegs, cartesian_segment* carSegs, double* distance, double* threshold, int numElements, int* d_numSegments)
+__global__ void processData(laserdata_raw* data, double* distance, double* threshold)
 {
-//	printf("Thread %d entered kernel\n", threadIdx.x);
 	distance[threadIdx.x] = computeEuclideanDistance(data[threadIdx.x], data[threadIdx.x + 1]);
 	threshold[threadIdx.x] = computeThreshold(data[threadIdx.x], data[threadIdx.x + 1]);
-//	printf("Thread %d finished Dist/Thresh computation\n", threadIdx.x);
-/*	int l_numSegments;
-	if(threadIdx.x == 0)
-	{
-	//	printf("Thread %d before Segmentation\n", threadIdx.x);
-		l_numSegments = segmentData(data,rawSegs,distance,threshold,numElements);
-	//	printf("Thread %d after Segmentation\n", threadIdx.x);
-		*d_numSegments = l_numSegments;
-	}*/
-/*	__syncthreads();
-//	printf("Num Segs %d\n",l_numSegments);
-	if(threadIdx.x < l_numSegments)
-	{
-		doCoordinateTransformDevice(rawSegs, carSegs, threadIdx.x);
-	}*/
-//	printf("Thread %d left kernel\n", threadIdx.x);
-
 }
 
 __global__ void testMemory(raw_segment* rawSegs)
@@ -562,7 +544,7 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 
 	error = cudaMemcpyAsync(d_data, h_data, size_struct, cudaMemcpyHostToDevice,stream1);
 
-	processData<<<1,numElements-1,0,stream1>>>(d_data, d_rawSegs, d_carSegs, d_dist, d_thresh, numElements, d_numSegments);
+	processData<<<1,numElements-1,0,stream1>>>(d_data,d_dist, d_thresh);
 
 	error = cudaMemcpyAsync(dist, d_dist, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost,stream1);
 	if (error != cudaSuccess) {
@@ -629,40 +611,15 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	for(int i=0; i<segment_counter;i++)
-	{
-		error = cudaMemcpy(&((d_rawSegs+i)->measures), &(d_rawMeasure.data()[i]), sizeof(laserdata_raw*), cudaMemcpyHostToDevice);
-		if (error != cudaSuccess) {
-			printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(error), error, __LINE__);
-		}
-		error = cudaMemcpy(d_rawMeasure[i], segments.at(i).measures, segments.at(i).numberOfMeasures*sizeof(laserdata_raw), cudaMemcpyHostToDevice);
-		if (error != cudaSuccess) {
-			printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(error), error, __LINE__);
-		}
-	}
-
 	coordinateTransform<<<segment_counter,NUMBER_LASERRAYS>>>(d_rawSegs, d_carSegs);
 	std::vector<cartesian_segment> transformedData(segment_counter);
-	cudaDeviceSynchronize();
+
 	error = cudaMemcpy(transformedData.data(), d_carSegs, segment_counter*sizeof(cartesian_segment), cudaMemcpyDeviceToHost);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
-	std::vector<laserdata_cartesian*> memory(segment_counter);
-	for(uint i=0; i<segment_counter; i++)
-	{
-		memory.at(i) = (laserdata_cartesian*) malloc(transformedData.at(i).numberOfMeasures*sizeof(laserdata_cartesian));
-		transformedData.at(i).measures = memory.at(i);
-		error = cudaMemcpy(transformedData.at(i).measures, d_carMeasure[i], transformedData.at(i).numberOfMeasures*sizeof(laserdata_cartesian), cudaMemcpyDeviceToHost);
-		if (error != cudaSuccess) {
-			printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(error), error, __LINE__);
-		}
-	}
-
+	visualizer.visualizeSegmentsAsPointCloud(transformedData,number);
 	std::vector<PointCellDevice> vehicles = computeVehicleState(transformedData, number);
 #ifdef PRINT
 	std::cout << "Extracted "  << x << " cars from data" << std::endl;
@@ -704,37 +661,6 @@ double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 	return C0 + C1*min_distance;
 
 //	double beta = 0.5;
-}
-
-std::vector<cartesian_segment> DataReader::doCoordinateTransform(std::vector<raw_segment> segments)
-{
-	/*std::vector<cartesian_segment> transformedData;
-
-	for(uint i = 0; i<segments.size(); i++)
-	{
-		raw_segment seg = segments.at(i);
-		cartesian_segment curSeg;
-		curSeg.numberOfMeasures = seg.numberOfMeasures;
-
-		double angleInRadians;
-
-		for(int j=0; j<seg.numberOfMeasures; j++)
-		{
-			laserdata_raw raw = seg.measures.at(j);
-			laserdata_cartesian currentLaser;
-
-			angleInRadians = raw.angle * M_PI / 180.0;
-
-			currentLaser.x = raw.distance*cos(angleInRadians);
-			currentLaser.y = raw.distance*sin(angleInRadians);
-
-
-
-		//	curSeg.measures.push_back(currentLaser);
-		}
-		transformedData.push_back(curSeg);
-	}
-	return transformedData;*/
 }
 
 std::vector<PointCellDevice> DataReader::computeVehicleState(std::vector<cartesian_segment> segments, std::string number)

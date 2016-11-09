@@ -49,6 +49,7 @@
 #include <cassert>
 #include <climits>
 #include <vector>
+#include <stdio.h>
 #include <cuda.h>
 
 // Class forward for identity matrix.

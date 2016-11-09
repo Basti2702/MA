@@ -159,7 +159,7 @@ __host__ __device__ void PointCellDevice::computeCovarianceF()
 	writeF(1,3,f23);
 	writeF(1,4,f24);
 }
-void PointCellDevice::update(double* newState)
+__host__ __device__ void PointCellDevice::update(double* newState)
 {
 	double velocity, phi;
 	double xNew = newState[0];
@@ -229,7 +229,7 @@ void PointCellDevice::update(double* newState)
 	}
 
 	//S inverse
-	Matrix<double> S(5,5);
+/*	Matrix<double> S(5,5);
 	for(int i=0; i<5;i++)
 	{
 		for(int j=0; j<5;j++)
@@ -237,7 +237,6 @@ void PointCellDevice::update(double* newState)
 			S.put(i,j,getS(i,j));
 		}
 	}
-
 	S.invert();
 	for(int i=0; i<5;i++)
 	{
@@ -245,7 +244,9 @@ void PointCellDevice::update(double* newState)
 		{
 			writeS(i,j,S.get(i,j));
 		}
-	}
+	}*/
+
+	invertS();
 
 	//K = tmp*S_i
 	for(int i=0; i<5; i++)
@@ -331,6 +332,166 @@ void PointCellDevice::update(double* newState)
 			writeP(i,j, getTmp2(i,j));
 		}
 	}
+
+}
+
+__host__ __device__ void PointCellDevice::invertS()
+{
+	//Concatenate IdentityMatrix to the right of S
+	double toInvert[50];
+	for(int i=0; i<5; i++)
+	{
+		for(int j=0; j<5; j++)
+		{
+			toInvert[i*10 +j] = getS(i,j);
+		}
+	}
+	for(int i=0; i<5; i++)
+	{
+		for(int j=5; j<10; j++)
+		{
+			if(j-i == 5)
+			{
+				toInvert[i*10 +j] = 1;
+			}
+			else
+			{
+				toInvert[i*10 +j] = 0;
+			}
+		}
+	}
+	reducedRowEcholon(toInvert);
+
+}
+
+__host__ __device__ void PointCellDevice::reducedRowEcholon(double* toInvert)
+{
+    double const ZERO = static_cast<double>( 0 );
+    int order[5];
+    int rows = 5;
+    int columns = 10;
+    for(int i=0; i<5; i++)
+    {
+    	order[i] = i;
+    }
+    // For each row...
+    for ( unsigned rowIndex = 0; rowIndex < rows; ++rowIndex )
+    {
+      // Reorder the rows.
+      reorder(toInvert, order);
+
+      unsigned row = order[ rowIndex ];
+
+      // Divide row down so first term is 1.
+      unsigned column = getLeadingZeros( row , toInvert);
+      double divisor = toInvert[(row * columns) + column];
+      if ( ZERO != divisor )
+      {
+        divideRow(toInvert, row, divisor );
+
+        // Subtract this row from all subsequent rows.
+        for ( unsigned subRowIndex = ( rowIndex + 1 ); subRowIndex < rows; ++subRowIndex )
+        {
+          unsigned subRow = order[ subRowIndex ];
+          if ( ZERO != toInvert[(subRow * columns) + column] )
+            rowOperation
+            (
+              toInvert,
+              subRow,
+              row,
+              -toInvert[(subRow * columns) + column]
+            );
+        }
+      }
+
+    }
+
+    // Back substitute all lower rows.
+    for ( unsigned rowIndex = ( rows - 1 ); rowIndex > 0; --rowIndex )
+    {
+      unsigned row = order[ rowIndex ];
+      unsigned column = getLeadingZeros( row ,toInvert);
+      for ( unsigned subRowIndex = 0; subRowIndex < rowIndex; ++subRowIndex )
+      {
+        unsigned subRow = order[ subRowIndex ];
+        rowOperation
+        (
+          toInvert,
+          subRow,
+          row,
+          -toInvert[(subRow * columns) + column]
+        );
+      }
+    }
+    getSubMatrix(toInvert,0, 4, 5, 9, order);
+}
+__host__ __device__ void PointCellDevice::reorder(double* toInvert, int* order)
+{
+    unsigned zeros[5];
+    int rows = 5;
+    for ( unsigned row = 0; row < rows; ++row )
+    {
+      order[ row ] = row;
+      zeros[ row ] = getLeadingZeros(row, toInvert);
+    }
+
+    for ( unsigned row = 0; row < (rows-1); ++row )
+    {
+      unsigned swapRow = row;
+      for ( unsigned subRow = row + 1; subRow < rows; ++subRow )
+      {
+        if ( zeros[ order[ subRow ] ] < zeros[ order[ swapRow ] ] )
+          swapRow = subRow;
+      }
+
+      unsigned hold    = order[ row ];
+      order[ row ]     = order[ swapRow ];
+      order[ swapRow ] = hold;
+    }
+}
+__host__ __device__ void PointCellDevice::divideRow(double* toInvert, int row, double divisor)
+{
+    for ( unsigned column = 0; column < 10; ++column )
+    {
+      toInvert[ (row * 10) + column] /= divisor;
+    }
+}
+__host__ __device__ void PointCellDevice::rowOperation(double* toInvert, int row, int addRow, double scale)
+{
+	int columns = 10;
+    for ( unsigned column = 0; column < columns; ++column )
+    {
+      toInvert[ (row * columns) + column] += toInvert[ (addRow * columns) + column] * scale;
+    }
+}
+
+__host__ __device__ unsigned PointCellDevice::getLeadingZeros(unsigned row, double* toInvert) const
+{
+	  double const ZERO = static_cast< double >( 0 );
+	  unsigned column = 0;
+	  while ( ZERO == toInvert[ (row * 10) + column] )
+	  {
+	    ++column;
+	  }
+	  return column;
+}
+
+__host__ __device__ void PointCellDevice::getSubMatrix(double* toInvert, unsigned startRow,unsigned endRow,unsigned startColumn,unsigned endColumn, int* newOrder)
+{
+	int columns = 10;
+    for ( unsigned row = startRow; row <= endRow; ++row )
+    {
+      unsigned subRow;
+      if ( NULL == newOrder )
+        subRow = row;
+      else
+        subRow = newOrder[ row ];
+
+      for ( unsigned column = startColumn; column <= endColumn; ++column )
+      {
+    	 writeS((row - startRow),(column - startColumn), toInvert[ (subRow * columns) + column]);
+      }
+    }
 
 }
 __host__ __device__ int PointCellDevice::getID()

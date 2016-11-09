@@ -12,7 +12,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <algorithm>
-#include "Matrix.cuh"
 #include <cuda.h>
 
 
@@ -29,7 +28,7 @@ public:
 	double subInvtl;
 
 	__host__ __device__ void predict();
-	void update(double* newState);
+	__host__ __device__ void update(double* newState);
 	__host__ __device__ int getID();
 	__host__ __device__ void setID(int id);
 	__host__ __device__ double getX();
@@ -70,6 +69,14 @@ private:
 	__host__ __device__ double getS(int row, int col);
 	__host__ __device__ double getTmp(int row, int col);
 	__host__ __device__ double getTmp2(int row, int col);
+
+	__host__ __device__ void invertS();
+	__host__ __device__ void reducedRowEcholon(double* toInvert);
+	__host__ __device__ void reorder(double* toInvert, int* order);
+	__host__ __device__ void divideRow(double* toInvert, int row, double divisor);
+	__host__ __device__ void rowOperation(double* toInvert, int row, int addRow, double scale);
+	__host__ __device__ unsigned getLeadingZeros(unsigned row, double* toInvert) const;
+	__host__ __device__ void getSubMatrix(double* toInvert, unsigned startRow,unsigned endRow,unsigned startColumn,unsigned endColumn, int* newOrder = NULL);
 
 	int ID;
 };

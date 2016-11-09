@@ -39,7 +39,7 @@ DataVisualizer::~DataVisualizer() {
  */
 void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number)
 {
-/*	  std::ofstream myfile;
+	  std::ofstream myfile;
 	  std::ostringstream filename;
 	  filename << VISUALIZATIONPATH << "/PointCloud" << number << ".html";
 	  myfile.open (filename.str().c_str());
@@ -52,7 +52,7 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 		cartesian_segment seg = segments.at(i);
 		for(int j=0; j<seg.numberOfMeasures; j++)
 		{
-			laserdata_cartesian data = seg.measures.at(j);
+			laserdata_cartesian data = seg.measures[j];
 			//compute coordinates on Canvas, default 0 is on top but should be on the bottom and in the middle
 			int xOnCanvas = CANVASSIZE;
 			int yOnCanvas = CANVASSIZE/2;
@@ -78,7 +78,7 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 	  myfile << "</svg>" << std::endl;
 	  myfile << "</body>" << std::endl;
 	  myfile << "</html>" << std::endl;
-	  myfile.close();*/
+	  myfile.close();
 }
 
 void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number)
@@ -159,7 +159,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 	}
 
 	//visualize Vehicle Motion
-	myfile << "<polyline points=\"";
+/*	myfile << "<polyline points=\"";
 	for(uint i = 0; i<EML.size(); i++)
 	{
 		Pos curPos = EML.at(i);
@@ -172,7 +172,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 
 		myfile << yOnCanvas << "," << xOnCanvas << " ";
 	}
-	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;
+	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;*/
 	myfile << "</svg>" << std::endl;
 	myfile << "</body>" << std::endl;
 	myfile << "</html>" << std::endl;

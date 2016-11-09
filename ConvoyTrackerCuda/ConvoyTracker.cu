@@ -51,6 +51,20 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
+	error = cudaHostAlloc((void**) &h_historyMatchSelf, MAX_SEGMENTS*sizeof(int), cudaHostAllocDefault);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaMalloc((void **) &d_historyMatchSelf, MAX_SEGMENTS*sizeof(int));
+	if(error != cudaSuccess)
+	{
+		printf(
+				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
 	error = cudaMalloc((void **) &d_newVeh, MAX_SEGMENTS*sizeof(PointCellDevice));
 	if(error != cudaSuccess)
 	{
@@ -116,6 +130,7 @@ std::string getNextMeasureAsString(int i)
 	}
 	return number.str();
 }
+
 
 __device__ void shiftRotateHistory(PointCellDevice* d_pc, double x, double y, double theta)
 {
@@ -230,7 +245,17 @@ __device__ bool findHistoryMatch(PointCellDevice* trackedVehicles, PointCellDevi
 	result = (result && (trackedVehicles->getY() <= d_history->getY() + 1.0));
 	return result;
 }
-
+__device__ bool findHistoryMatchSelf(PointCellDevice* d_history)
+{
+	bool result = true;
+	result = (result && (d_history->getX() - 0.5 <= 0));
+	result = (result && (0 <= d_history->getX() + 0.5));
+	result = (result && (d_history->getY() - 1.0 <= 0));
+	result = (result && (0 <= d_history->getY() + 1.0));
+	//result = (result && (index < d_history->endIndex));
+	//result = (result && (index >= d_history->startIndex));
+	return result;
+}
 __global__ void compensateEgoMotionMap(PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle)
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
@@ -269,18 +294,21 @@ __global__ void compensateEgoMotion(PointCellDevice* d_history, EMLPos* d_convoy
 __global__ void findConvoyDevice(PointCellDevice* trackedVehicles, PointCellDevice* d_history, int* d_historyMatch)
 {
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
-//	index = index*blockDim.x + threadIdx.x;
 	if(findHistoryMatch(&(trackedVehicles[blockIdx.y]),&(d_history[index])))
 	{
 #ifdef PRINT
 		printf("TrackedID %d, HistoryID %d\n", trackedVehicles[blockIdx.y].getID(), d_history[index].getID());
 #endif
 		atomicMin(&(d_historyMatch[blockIdx.y]), d_history[index].getID());
-		/*__syncthreads();
-		if(d_historyMatch[blockIdx.y] == index)
-		{
-			d_historyMatch[blockIdx.y] = d_history[index].getID();
-		}*/
+	}
+}
+
+__global__ void findConvoyDeviceSelf(PointCellDevice* d_history, int* d_historyMatchSelf)
+{
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+	if(findHistoryMatchSelf(&(d_history[index])))
+	{
+		atomicMin(d_historyMatchSelf, d_history[index].getID());
 	}
 }
 
@@ -354,8 +382,6 @@ int main()
 #endif
 	}
 
-	cudaSetDeviceFlags(cudaDeviceMapHost);
-
 	cudaEvent_t startEvent, stopEvent, start2Event, stop2Event;
 	cudaEventCreate(&startEvent);
 	cudaEventCreate(&stopEvent);
@@ -363,6 +389,7 @@ int main()
 	cudaEventCreate(&stop2Event);
 	cudaEventRecord(startEvent, 0);
 	ConvoyTracker tracker;
+	memSetHistory<<<NUM_HIST, MAX_LENGTH_HIST_CONV>>>(tracker.d_history);
 	std::vector<PointCellDevice> vehicles;
 	float compensateHistory[NUM_MEASUREMENT];
 
@@ -390,6 +417,9 @@ int main()
 			tracker.shiftStructure(deltaX);
 			tracker.rotateStructure(deltaYaw, deltaY);
 
+			*tracker.h_historyMatchSelf = INT_MAX;
+			cudaMemcpy(tracker.d_historyMatchSelf, tracker.h_historyMatchSelf, sizeof(int), cudaMemcpyHostToDevice);
+			findConvoyDeviceSelf<<<tracker.history.size(), MAX_LENGTH_HIST_CONV>>>(tracker.d_history, tracker.d_historyMatchSelf);
 			//2. Predict current vehicle states
 			for(uint j = 0; j < tracker.intervalMap.size(); j++)
 			{
@@ -413,6 +443,11 @@ int main()
 		}
 
 		tracker.transformDataFromDevice();
+		cudaMemcpy(tracker.h_historyMatchSelf, tracker.d_historyMatchSelf, sizeof(int), cudaMemcpyDeviceToHost);
+		if(*tracker.h_historyMatchSelf != INT_MAX)
+		{
+			tracker.findConvoySelf(*tracker.h_historyMatchSelf);
+		}
 
 		//3. Associate and Update
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
@@ -803,7 +838,11 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						{
 							convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
 						}
-						currentConvoy.participatingVehicles.push_back(vehicle.getID());
+						convoys.at(j).participatingVehicles.push_back(vehicle.getID());
+						if(convoys.at(j).participatingVehicles.size() > MAX_LENGTH_HIST_CONV)
+						{
+							convoys.at(j).participatingVehicles.erase(convoys.at(j).participatingVehicles.begin());
+						}
 						convoyFound = true;
 						break;
 					}
@@ -823,7 +862,11 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						{
 							convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
 						}
-						currentConvoy.participatingVehicles.push_back(id1);
+						convoys.at(j).participatingVehicles.push_back(id1);
+						if(convoys.at(j).participatingVehicles.size() > MAX_LENGTH_HIST_CONV)
+						{
+							convoys.at(j).participatingVehicles.erase(convoys.at(j).participatingVehicles.begin());
+						}
 						convoyFound = true;
 						break;
 					}
@@ -1247,25 +1290,7 @@ void ConvoyTracker::transformDataFromDevice()
 				"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(err), err, __LINE__);
 		}
-		/*for(int i=0; i<it->second.size();i++)
-		{
-			err = cudaMemcpy(it->second.data()[i].data, d_history[index+i].data, 260*sizeof(double), cudaMemcpyDeviceToHost);
-			if(err != cudaSuccess)
-			{
-				printf(
-					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(err), err, __LINE__);
-			}
 
-			err = cudaMemcpy(&((d_history+i)->data), &(historyPointer.data()[pcCounter]), sizeof(double*), cudaMemcpyHostToDevice);
-			if(err != cudaSuccess)
-			{
-				printf(
-					"cudaGetDeviceProperties returned error %s (code %d), line(%d)\n",
-					cudaGetErrorString(err), err, __LINE__);
-			}
-			++pcCounter;
-		}*/
 		//check whether current History is already behind our car
 		if(it->second.at(it->second.size()-1).getX() < -5)
 		{
@@ -1315,3 +1340,85 @@ void ConvoyTracker::transformDataFromDevice()
 		}
 	}
 }
+
+void ConvoyTracker::findConvoySelf(int ID)
+{
+	double x = 0;
+					int interval = floor(x);
+					int id1 = -1;
+					int id2 = ID;
+					std::cout << ID << std::endl;
+	#ifdef PRINT
+					std::cout << "ID1 " << id1  << " ID2 " << id2 << std::endl;
+	#endif
+					bool convoyFound = false;
+					for(uint j = 0; j < convoys.size(); j++)
+					{
+						std::vector<int>::iterator it1, it2;
+						Convoy currentConvoy = convoys.at(j);
+						it1 = std::find(currentConvoy.participatingVehicles.begin(), currentConvoy.participatingVehicles.end(), id1);
+						it2 = std::find(currentConvoy.participatingVehicles.begin(), currentConvoy.participatingVehicles.end(), id2);
+						if(it1 != currentConvoy.participatingVehicles.end() && it2 != currentConvoy.participatingVehicles.end())
+						{
+							//convoy already exists with both IDS
+							//check if this x value is already contained
+							if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+							{
+								//x value is not contained
+								EMLPos newPos;
+								newPos.x = 0.5;
+								newPos.y = 0;
+								newPos.theta = 0;
+								newPos.subIntvl = 0.5;
+								convoys.at(j).tracks.push_back(newPos);
+							}
+							if(convoys.at(j).tracks.size() > MAX_LENGTH_HIST_CONV)
+							{
+								convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
+							}
+							convoyFound = true;
+							break;
+						}
+						else if (it1 != currentConvoy.participatingVehicles.end())
+						{
+							//check if this x value is already contained
+							if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+							{
+								EMLPos newPos;
+								newPos.x = 0.5;
+								newPos.y = 0;
+								newPos.theta = 0;
+								newPos.subIntvl = 0.5;
+								convoys.at(j).tracks.push_back(newPos);
+							}
+							if(convoys.at(j).tracks.size() > MAX_LENGTH_HIST_CONV)
+							{
+								convoys.at(j).tracks.erase(convoys.at(j).tracks.begin());
+							}
+							convoys.at(j).participatingVehicles.push_back(id2);
+							if(convoys.at(j).participatingVehicles.size() > MAX_LENGTH_HIST_CONV)
+							{
+								convoys.at(j).participatingVehicles.erase(convoys.at(j).participatingVehicles.begin());
+							}
+							convoyFound = true;
+							break;
+						}
+					}
+
+					if(!convoyFound)
+					{
+						Convoy newConvoy;
+						newConvoy.ID = convoyID++;
+						newConvoy.participatingVehicles.push_back(id1);
+						newConvoy.participatingVehicles.push_back(id2);
+						EMLPos newPos;
+						newPos.x = interval+0.5;
+						newPos.y = 0;
+						newPos.theta = 0;
+						newPos.subIntvl = 0.5;
+						newConvoy.tracks.push_back(newPos);
+						convoys.push_back(newConvoy);
+					}
+					currentConvoyOnDevice = false;
+				}
+

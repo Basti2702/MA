@@ -33,7 +33,7 @@
  * Szenario 4: own car is changing the lane
  *
  */
-#define SZENARIO 5
+#define SZENARIO 1
 
 #if SZENARIO == 1
 /*
@@ -88,12 +88,12 @@ struct laserdata_cartesian{
 
 struct raw_segment{
 	int numberOfMeasures;
-	laserdata_raw* measures;
+	laserdata_raw measures[NUMBER_LASERRAYS];
 };
 
 struct cartesian_segment{
 	int numberOfMeasures;
-	laserdata_cartesian* measures;
+	laserdata_cartesian measures[NUMBER_LASERRAYS];
 };
 
 typedef struct EMLPos{

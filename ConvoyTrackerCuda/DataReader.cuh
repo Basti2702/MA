@@ -66,7 +66,6 @@ private:
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
 	std::vector<PointCellDevice> computeVehicleState(std::vector<cartesian_segment> segments, std::string number);
-	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
 	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };
 

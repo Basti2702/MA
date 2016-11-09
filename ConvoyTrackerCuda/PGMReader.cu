@@ -32,21 +32,45 @@ int** PGMReader::readPGMFile(const char* filename)
         exit(EXIT_FAILURE);
     }
 
-    fgets(version, sizeof(version), pgmFile);
+    if(!fgets(version, sizeof(version), pgmFile))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
     if (strcmp(version, "P2")) {
         fprintf(stderr, "Wrong file type!\n");
         exit(EXIT_FAILURE);
     }
 
     skipComments(pgmFile);
-    fscanf(pgmFile, "%d", &col);
+    if(!fscanf(pgmFile, "%d", &col))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
     skipComments(pgmFile);
-    fscanf(pgmFile, "%d", &row);
+    if(!fscanf(pgmFile, "%d", &row))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
     skipComments(pgmFile);
-    fscanf(pgmFile, "%d", &max_gray);
+    if(!fscanf(pgmFile, "%d", &max_gray))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
     skipComments(pgmFile);
-    fscanf(pgmFile, "%d", &carX);
-    fgetc(pgmFile);
+    if(!fscanf(pgmFile, "%d", &carX))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
+    if(!fgetc(pgmFile))
+    {
+        perror("cannot open file to read");
+        exit(EXIT_FAILURE);
+    }
 
     fprintf(stdout,"Create Matrix with %d cols and %d rows, max_grey = %d CarX = %d\n", col, row, max_gray, carX);
 
@@ -60,7 +84,11 @@ int** PGMReader::readPGMFile(const char* filename)
         for (i = 0; i < row; ++i)
         {
             for (j = 0; j < col; ++j) {
-            	fscanf(pgmFile, "%d", &temp);
+            	if(!fscanf(pgmFile, "%d", &temp))
+            	{
+                    perror("cannot open file to read");
+                    exit(EXIT_FAILURE);
+            	}
                 matrix[i][j] = temp;
             }
         }
@@ -77,7 +105,11 @@ void PGMReader::skipComments(FILE *fp)
     while ((ch = fgetc(fp)) != EOF && isspace(ch))
         ;
     if (ch == '#') {
-        fgets(line, sizeof(line), fp);
+        if(!fgets(line, sizeof(line), fp))
+        {
+            perror("cannot open file to read");
+            exit(EXIT_FAILURE);
+        }
         skipComments(fp);
     } else
         fseek(fp, -1, SEEK_CUR);

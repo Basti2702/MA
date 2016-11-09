@@ -41,10 +41,13 @@ public:
 	PointCellDevice* d_newVeh;
 	int* d_historyMatch;
 	int* h_historyMatch;
+	int* h_historyMatchSelf;
+	int* d_historyMatchSelf;
 	EMLPos* d_convoys;
 
 	double* xSubInterval;
 	double* d_subIntvl_ptr;
+	bool memset;
 
 //	std::vector<double*> intervalPointer;
 //	std::vector<double*> historyPointer;
@@ -80,6 +83,7 @@ public:
 	void setXOld(double old);
 	void transformDataToDevice();
 	void transformDataFromDevice();
+	void findConvoySelf(int ID);
 
 private:
 	int ID;
