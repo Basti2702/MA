@@ -159,7 +159,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 	}
 
 	//visualize Vehicle Motion
-/*	myfile << "<polyline points=\"";
+	myfile << "<polyline points=\"";
 	for(uint i = 0; i<EML.size(); i++)
 	{
 		Pos curPos = EML.at(i);
@@ -172,7 +172,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 
 		myfile << yOnCanvas << "," << xOnCanvas << " ";
 	}
-	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;*/
+	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;
 	myfile << "</svg>" << std::endl;
 	myfile << "</body>" << std::endl;
 	myfile << "</html>" << std::endl;
