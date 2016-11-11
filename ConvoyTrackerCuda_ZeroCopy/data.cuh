@@ -21,6 +21,7 @@
 #define MAX_SEGMENTS 193
 
 //#define PRINT
+#define VISUALIZE
 //#define CREATE_MEASURES
 
 /**

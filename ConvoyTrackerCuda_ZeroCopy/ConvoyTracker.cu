@@ -160,51 +160,58 @@ std::string getNextMeasureAsString(int i)
 __device__ void shiftRotateHistory(History* d_pc, double x, double y, double theta, int index)
 {
 	//update history
-	d_pc->tracks[index].subIntvl += x;
-	int numIntervals = (int) ((d_pc->tracks[index].subIntvl) / INTERVALL_LENGTH);
-	d_pc->tracks[index].x -= numIntervals;
-	d_pc->tracks[index].subIntvl -= numIntervals;
+	if(((index < d_pc->endIndex)  && (d_pc->endIndex > d_pc->startIndex)) || ((d_pc->endIndex < d_pc->startIndex) && (index != d_pc->endIndex)))
+	{
 
-	double angleInRadians = theta*M_PI/180.0;
-	double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
-			{ sin(angleInRadians), cos(angleInRadians) } };
-			//update history
-			d_pc->tracks[index].y -= y;
-			d_pc->tracks[index].theta -= angleInRadians;
+		d_pc->tracks[index].subIntvl += x;
+		int numIntervals = (int) ((d_pc->tracks[index].subIntvl) / INTERVALL_LENGTH);
+		d_pc->tracks[index].x -= numIntervals;
+		d_pc->tracks[index].subIntvl -= numIntervals;
 
-			double xAbs = d_pc->tracks[index].x;
-			double yAbs = d_pc->tracks[index].y;
+		double angleInRadians = theta*M_PI/180.0;
+		double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
+				{ sin(angleInRadians), cos(angleInRadians) } };
 
-			xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
-			yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+		//update history
+		d_pc->tracks[index].y -= y;
+		d_pc->tracks[index].theta -= angleInRadians;
 
-			d_pc->tracks[index].y -= yAbs;
-			d_pc->tracks[index].subIntvl -= xAbs;
+		double xAbs = d_pc->tracks[index].x;
+		double yAbs = d_pc->tracks[index].y;
+
+		xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
+		yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+
+		d_pc->tracks[index].y -= yAbs;
+		d_pc->tracks[index].subIntvl -= xAbs;
+	}
 }
 
 __device__ void shiftRotateConvoy(Convoy* d_eml, double x, double y, double theta, int index)
 {
-	d_eml->tracks[index].subIntvl += x;
-	int numIntervals = (int) ((d_eml->tracks[index].subIntvl) / INTERVALL_LENGTH);
-	d_eml->tracks[index].x -= numIntervals;
-	d_eml->tracks[index].subIntvl -= numIntervals;
+	if(((index < d_eml->endIndexTracks)  && (d_eml->endIndexTracks > d_eml->startIndexTracks)) || ((d_eml->endIndexTracks < d_eml->startIndexTracks) && (index != d_eml->endIndexTracks)))
+	{
+		d_eml->tracks[index].subIntvl += x;
+		int numIntervals = (int) ((d_eml->tracks[index].subIntvl) / INTERVALL_LENGTH);
+		d_eml->tracks[index].x -= numIntervals;
+		d_eml->tracks[index].subIntvl -= numIntervals;
 
-	double angleInRadians = theta*M_PI/180.0;
-	double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
-			{ sin(angleInRadians), cos(angleInRadians) } };
+		double angleInRadians = theta*M_PI/180.0;
+		double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
+				{ sin(angleInRadians), cos(angleInRadians) } };
 
-	d_eml->tracks[index].y -= y;
-	d_eml->tracks[index].theta -= angleInRadians;
+		d_eml->tracks[index].y -= y;
+		d_eml->tracks[index].theta -= angleInRadians;
 
-	double xAbs = d_eml->tracks[index].x;
-	double yAbs = d_eml->tracks[index].y;
+		double xAbs = d_eml->tracks[index].x;
+		double yAbs = d_eml->tracks[index].y;
 
-	xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
-	yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+		xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
+		yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
-	d_eml->tracks[index].y -= yAbs;
-	d_eml->tracks[index].subIntvl -= xAbs;
-
+		d_eml->tracks[index].y -= yAbs;
+		d_eml->tracks[index].subIntvl -= xAbs;
+	}
 }
 
 __device__ void computeIntervalMap(PointCellDevice* d_interval, double xMotion, double yMotion, double angle, double* xSubInterval)
@@ -258,7 +265,7 @@ __device__ void computeIntervalMap(PointCellDevice* d_interval, double xMotion, 
 		d_interval->subInvtl -= xAbs;
 	}
 
-	d_interval->predict();
+//	d_interval->predict();
 }
 
 __device__ bool findHistoryMatch(PointCellDevice* trackedVehicles, History* d_history, int index)
@@ -268,7 +275,7 @@ __device__ bool findHistoryMatch(PointCellDevice* trackedVehicles, History* d_hi
 	result = (result && (trackedVehicles->getX() <= d_history->tracks[index].x + 0.5));
 	result = (result && (d_history->tracks[index].y - 1.0 <= trackedVehicles->getY()));
 	result = (result && (trackedVehicles->getY() <= d_history->tracks[index].y + 1.0));
-	result = (result && (((index < d_history->endIndex)  && (d_history->endIndex > d_history->startIndex)) || ((d_history->endIndex < d_history->startIndex) && (index != d_history->endIndex))));
+//	result = (result && (((index < d_history->endIndex)  && (d_history->endIndex > d_history->startIndex)) || ((d_history->endIndex < d_history->startIndex) && (index != d_history->endIndex))));
 	//result = (result && (index >= d_history->startIndex));
 	return result;
 }
@@ -280,15 +287,46 @@ __device__ bool findHistoryMatchSelf(History* d_history, int index)
 	result = (result && (0 <= d_history->tracks[index].x + 0.5));
 	result = (result && (d_history->tracks[index].y - 1.0 <= 0));
 	result = (result && (0 <= d_history->tracks[index].y + 1.0));
-	result = (result && (((index < d_history->endIndex)  && (d_history->endIndex > d_history->startIndex)) || ((d_history->endIndex < d_history->startIndex) && (index != d_history->endIndex))));
+//	result = (result && (((index < d_history->endIndex)  && (d_history->endIndex > d_history->startIndex)) || ((d_history->endIndex < d_history->startIndex) && (index != d_history->endIndex))));
 	//result = (result && (index >= d_history->startIndex));
 	return result;
 }
 
+__device__ void predictDevice(PointCellDevice* vehicle, int index)
+{
+	int state = index%5;
+	//row
+	int i = index / 5 ;
+	//column
+	int j = state;
+	vehicle->data[state+5] = vehicle->data[state];
+	__syncthreads();
+	vehicle->computeF();
+	vehicle->computeCovarianceF();
+	double tmp = 0;
+	//Tmp = F*P
+	for(int k=0; k<5; k++)
+	{
+		tmp += vehicle->getF(i,k)*vehicle->getP(k,j);
+	}
+	vehicle->writeTmp(i,j, tmp);
+	__syncthreads();
+	//P = tmp*F_t
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += vehicle->getTmp(i,k)*vehicle->getF(j,k);
+	}
+	vehicle->writeP(i,j, tmp);
+	__syncthreads();
+	//P = P+Q
+	tmp = vehicle->getP(i,j) + vehicle->getQ(i,j);
+	vehicle->writeP(i,j, tmp);
+}
+
 __global__ void compensateEgoMotionMap(PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle)
 {
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-	computeIntervalMap(&(d_interval[index]), x, y, angle, d_subIntvl);
+	computeIntervalMap(&(d_interval[threadIdx.x]), x, y, angle, d_subIntvl);
 }
 __global__ void compensateEgoMotionHistory(History* d_history, double x, double y, double angle)
 {
@@ -300,47 +338,27 @@ __global__ void compensateEgoMotionConvoy(Convoy* d_convoy, double x, double y, 
 	shiftRotateConvoy(&(d_convoy[blockIdx.x]), x, y, angle, threadIdx.x);
 }
 
-__global__ void compensateEgoMotion(History* d_history, Convoy* d_convoy, PointCellDevice* d_interval, double* d_subIntvl, double x, double y, double angle, int numConv, int intvlSize)
-{
-	shiftRotateHistory(&(d_history[blockIdx.x]), x, y, angle, threadIdx.x);
-	if(blockIdx.x < numConv)
-	{
-		shiftRotateConvoy(&(d_convoy[blockIdx.x]), x, y, angle, threadIdx.x);
-	}
-	if(blockIdx.x < intvlSize)
-	{
-		if(threadIdx.x == 0)
-		{
-			computeIntervalMap(&(d_interval[blockIdx.x]), x, y, angle, d_subIntvl);
-
-		}
-	}
-}
-
 __global__ void findConvoyDevice(PointCellDevice* trackedVehicles, History* d_history, int* d_historyMatch)
 {
-	if(findHistoryMatch(&(trackedVehicles[blockIdx.y]),&(d_history[blockIdx.x]),threadIdx.x))
+	if(((threadIdx.x < d_history[blockIdx.x].endIndex)  && (d_history[blockIdx.x].endIndex > d_history[blockIdx.x].startIndex)) || ((d_history[blockIdx.x].endIndex < d_history[blockIdx.x].startIndex) && (threadIdx.x != d_history[blockIdx.x].endIndex)))
 	{
-#ifdef PRINT
-		printf("TrackedID %d, HistoryID %d, Index %d\n", trackedVehicles[blockIdx.y].getID(), d_history[blockIdx.x].ID);
-#endif
-		atomicMin(&(d_historyMatch[blockIdx.y]), d_history[blockIdx.x].ID);
+		if(findHistoryMatch(&(trackedVehicles[blockIdx.y]),&(d_history[blockIdx.x]),threadIdx.x))
+		{
+	#ifdef PRINT
+			printf("TrackedID %d, HistoryID %d, Index %d\n", trackedVehicles[blockIdx.y].getID(), d_history[blockIdx.x].ID);
+	#endif
+			atomicMin(&(d_historyMatch[blockIdx.y]), d_history[blockIdx.x].ID);
+		}
 	}
 }
 __global__ void findConvoyDeviceSelf(History* d_history, int* d_historyMatchSelf)
 {
-	if(findHistoryMatchSelf(&(d_history[blockIdx.x]),threadIdx.x))
+	if(((threadIdx.x < d_history[blockIdx.x].endIndex)  && (d_history[blockIdx.x].endIndex > d_history[blockIdx.x].startIndex)) || ((d_history[blockIdx.x].endIndex < d_history[blockIdx.x].startIndex) && (threadIdx.x != d_history[blockIdx.x].endIndex)))
 	{
-		atomicMin(d_historyMatchSelf, d_history[blockIdx.x].ID);
-	}
-}
-
-__global__ void insertIndex(History* d_history, int* d_historyMatch, int* d_historyIDs)
-{
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-	if( d_historyMatch[blockIdx.y] == index)
-	{
-		d_historyIDs[blockIdx.y] = d_history[blockIdx.x].ID;
+		if(findHistoryMatchSelf(&(d_history[blockIdx.x]),threadIdx.x))
+		{
+			atomicMin(d_historyMatchSelf, d_history[blockIdx.x].ID);
+		}
 	}
 }
 
@@ -349,9 +367,12 @@ __global__ void memSetHistoryMatch(int* d_historyMatch)
 	d_historyMatch[threadIdx.x] = INT_MAX;
 }
 
-__global__ void update(PointCellDevice* d_interval)
+/*
+ * Run Kalman-Filter Predict on Device with #vehicles as Blocks and 25 Threads per Block
+ */
+__global__ void predict(PointCellDevice* d_interval)
 {
-
+	predictDevice(&(d_interval[blockIdx.x]), threadIdx.x);
 }
 int main()
 {
@@ -410,9 +431,10 @@ int main()
 	cudaSetDeviceFlags(cudaDeviceMapHost);
 
 	cudaEvent_t startEvent, stopEvent, start2Event, stop2Event;
-	cudaStream_t stream2, stream3;
+	cudaStream_t stream2, stream3, stream4;
 	cudaStreamCreate(&stream2);
 	cudaStreamCreate(&stream3);
+	cudaStreamCreate(&stream4);
 	cudaEventCreate(&startEvent);
 	cudaEventCreate(&stopEvent);
 	cudaEventCreate(&start2Event);
@@ -421,7 +443,6 @@ int main()
 	ConvoyTracker tracker;
 	std::vector<PointCellDevice> vehicles;
 	float compensateHistory[NUM_MEASUREMENT];
-
 	for(int i=0; i<NUM_MEASUREMENT; i++)
 	{
 		cudaEventRecord(start2Event, 0);
@@ -434,9 +455,10 @@ int main()
 		double deltaY = tracker.getY() - tracker.getYOld();
 		double deltaYaw = tracker.getYaw() - tracker.getYawOld();
 
-		if(tracker.historySize > 0)
-		{
-			compensateEgoMotionHistory<<<tracker.historySize, MAX_LENGTH_HIST_CONV>>>(tracker.d_history_ptr, deltaX, deltaY, deltaYaw);
+			if(tracker.historySize > 0)
+			{
+				compensateEgoMotionHistory<<<tracker.historySize, MAX_LENGTH_HIST_CONV,0, stream4>>>(tracker.d_history_ptr, deltaX, deltaY, deltaYaw);
+			}
 			vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
 			if(tracker.convoySize > 0)
 			{
@@ -444,55 +466,41 @@ int main()
 			}
 			if(tracker.intervalSize > 0)
 			{
+//			tracker.shiftStructure(deltaX);
+//				tracker.rotateStructure(deltaYaw, deltaY);
+
 				compensateEgoMotionMap<<<1,tracker.intervalSize,0,stream3>>>(tracker.d_intervalMap_ptr, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
+				predict<<<tracker.intervalSize,25,0,stream3>>>(tracker.d_intervalMap_ptr);
+
 			}
-			cudaStreamSynchronize(stream3);
+
+		/*	tracker.shiftStructure(deltaX);
+			tracker.rotateStructure(deltaYaw, deltaY);
 			for(uint j=0; j<tracker.intervalSize;j++)
 			{
+				tracker.h_intervalMap[j].predict();
 				trackedVehicles.push_back(&(tracker.h_intervalMap[j]));
-			}
-		//	tracker.shiftStructure(deltaX);
-		//	tracker.rotateStructure(deltaYaw, deltaY);
+			}*/
+
 			*tracker.h_historyMatchSelf = INT_MAX;
 			findConvoyDeviceSelf<<<tracker.historySize, MAX_LENGTH_HIST_CONV>>>(tracker.d_history_ptr, tracker.d_historyMatchSelf_ptr);
 
-			//2. Predict current vehicle states
-		/*	for(uint j = 0; j < tracker.intervalSize; j++)
-			{
-				tracker.h_intervalMap[j].predict();
-				trackedVehicles.push_back(&tracker.h_intervalMap[j]);
-			}*/
 			cudaDeviceSynchronize();
 			if(*tracker.h_historyMatchSelf != INT_MAX)
 			{
 				tracker.findConvoySelf(*tracker.h_historyMatchSelf);
 			}
-		}
-		else
+		/*if(tracker.intervalSize >0)
 		{
-			if(tracker.intervalSize > 0)
-			{
-				compensateEgoMotionMap<<<1,tracker.intervalSize>>>(tracker.d_intervalMap_ptr, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
-			}
-			vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
-			cudaDeviceSynchronize();
-			for(uint j=0; j<tracker.intervalSize;j++)
-			{
-				trackedVehicles.push_back(&(tracker.h_intervalMap[j]));
-			}
-
-		/*	tracker.shiftStructure(deltaX);
-			tracker.rotateStructure(deltaYaw, deltaY);
-
-			//2. Predict current vehicle states
-			for(uint j = 0; j < tracker.intervalSize; j++)
-			{
-				tracker.h_intervalMap[j].predict();
-				trackedVehicles.push_back(&tracker.h_intervalMap[j]);
-			}*/
-		}
+			predict<<<tracker.intervalSize,25,0,stream3>>>(tracker.d_intervalMap_ptr);
+		}*/
 		tracker.transformDataFromDevice();
-
+		cudaStreamSynchronize(stream3);
+		for(uint j=0; j<tracker.intervalSize;j++)
+		{
+		//	tracker.h_intervalMap[j].predict();
+			trackedVehicles.push_back(&(tracker.h_intervalMap[j]));
+		}
 		//3. Associate and Update
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
 		cudaEventRecord(stop2Event, 0);
@@ -503,6 +511,9 @@ int main()
 	}
 	cudaEventRecord(stopEvent, 0);
 	cudaEventSynchronize(stopEvent);
+	cudaStreamDestroy(stream2);
+	cudaStreamDestroy(stream3);
+	cudaStreamDestroy(stream4);
 	float sumH = 0;
 
 	for(int i = 0; i< NUM_MEASUREMENT; i++)

@@ -43,11 +43,9 @@ public:
 	__host__ __device__ void setVelocity(double velocity);
 	__host__ __device__ void setPhi(double phi);
 	__host__ __device__ void initializeMemory();
-
-private:
-
 	__host__ __device__ void computeF();
 	__host__ __device__ void computeCovarianceF();
+
 	__host__ __device__ void writeP(int row, int col, double value);
 	__host__ __device__ void writeQ(int row, int col, double value);
 	__host__ __device__ void writeR(int row, int col, double value);
@@ -70,6 +68,7 @@ private:
 	__host__ __device__ double getTmp(int row, int col);
 	__host__ __device__ double getTmp2(int row, int col);
 
+private:
 	__host__ __device__ void invertS();
 	__host__ __device__ void reducedRowEcholon(double* toInvert);
 	__host__ __device__ void reorder(double* toInvert, int* order);

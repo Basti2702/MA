@@ -12,7 +12,7 @@ DataReader::DataReader() {
 	// TODO Auto-generated constructor stub
 	cudaError_t error;
 	cudaStreamCreate(&stream1);
-
+	cudaStreamCreate(&stream0);
 	error = cudaHostAlloc((void**) &h_data, NUMBER_LASERRAYS*sizeof(laserdata_raw), cudaHostAllocMapped);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
@@ -95,6 +95,7 @@ DataReader::~DataReader() {
 	cudaFreeHost(raw_segments);
 	cudaFreeHost(car_segments);
 	cudaStreamDestroy(stream1);
+	cudaStreamDestroy(stream0);
 }
 
 __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian* d_laser, unsigned long long* dist)
@@ -349,9 +350,12 @@ __global__ void coordinateTransform(raw_segment* rawSegs, cartesian_segment* car
 {
 	doCoordinateTransformDevice(rawSegs, carSegs, blockIdx.x, threadIdx.x);
 }
-__global__ void processData(laserdata_raw* data, double* distance, double* threshold)
+__global__ void processDist(laserdata_raw* data, double* distance)
 {
 	distance[threadIdx.x] = computeEuclideanDistance(data[threadIdx.x], data[threadIdx.x + 1]);
+}
+__global__ void processThresh(laserdata_raw* data, double* threshold)
+{
 	threshold[threadIdx.x] = computeThreshold(data[threadIdx.x], data[threadIdx.x + 1]);
 }
 
@@ -462,9 +466,9 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 		std::vector<PointCellDevice> vehicles;
 		return vehicles;
 	}
-	processData<<<1,numElements-1,0,stream1>>>(d_data_ptr, d_dist_ptr, d_thresh_ptr);
+	processDist<<<1,numElements-1,0,stream1>>>(d_data_ptr, d_dist_ptr);
+	processThresh<<<1, numElements-1,0, stream0>>>(d_data_ptr,d_thresh_ptr);
 
-	cudaStreamSynchronize(stream1);
 
 	int segment_counter = 0;
 	int data_counter = 0;
@@ -472,6 +476,8 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	//first point automatically is part of the first segment;
 	raw_segments[MAX_SEGMENTS].numberOfMeasures = 1;
 	raw_segments[MAX_SEGMENTS].measures[0] = h_data[0];
+	cudaStreamSynchronize(stream1);
+	cudaStreamSynchronize(stream0);
 	//iterate over all measures
 	for(int i=1; i<numElements; i++)
 	{
@@ -512,9 +518,11 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 #ifdef PRINT
 	printf("Extracted %d Objects from Laserdata\n", segment_counter);
 #endif
-	coordinateTransform<<<segment_counter,NUMBER_LASERRAYS>>>(d_rawSegs_ptr, d_carSegs_ptr);
-	cudaDeviceSynchronize();
+	coordinateTransform<<<segment_counter,NUMBER_LASERRAYS,0,stream1>>>(d_rawSegs_ptr, d_carSegs_ptr);
+	cudaStreamSynchronize(stream1);
+#ifdef VISUALIZE
 	visualizer.visualizeSegmentsAsPointCloud(car_segments, number, segment_counter);
+#endif
 	std::vector<PointCellDevice> vehicles = computeVehicleState(car_segments, segment_counter, number);
 	return vehicles;
 }
@@ -567,18 +575,6 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 		currentSegment = segments[i];
 		relevantPoints = getRelevantMeasuresFromSegment(currentSegment);
 
-		//ignore guard railing
-/*		if(relevantPoints.at(0).x == relevantPoints.at(1).x
-				&& relevantPoints.at(1).y == relevantPoints.at(1).y)
-		{
-			continue;
-		}
-		else if(relevantPoints.at(1).x == relevantPoints.at(2).x
-				&& relevantPoints.at(1).y == relevantPoints.at(2).y)
-		{
-			continue;
-		}*/
-
 		//we have three different points, compute bounds
 
 		int left = 0;
@@ -591,10 +587,6 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 		double nearestWidthRight = fabs(relevantPoints[1].y - relevantPoints[2].y);
 		//compute orientation of object regarding to the driving direction of our own car
 		//own direction vector(x,y): (1,0)
-	/*	std::cout << i << std::endl;
-		std::cout << "left x = " << relevantPoints[0].x << " y = " << relevantPoints[0].y << std::endl;
-		std::cout << "nearest x = " << relevantPoints[1].x << " y = " << relevantPoints[1].y << std::endl;
-		std::cout << "right x = " << relevantPoints[2].x << " y = " << relevantPoints[2].y << std::endl;*/
 
 		if(length > 2)
 		{
@@ -610,12 +602,6 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 
 		//objects should not be classified as vehicle if their orientation is bigger than 45°
 		//real vehicles should never be rotated over that value
-
-		/*	std::cout << "Theta: " << theta << std::endl;
-			std::cout << "ThetaLeft: " << thetaLeft << std::endl;
-			std::cout << "ThetaRight: " << thetaRight << std::endl;
-			std::cout << "Length: " << length << std::endl;
-			std::cout << "Width: " << width << std::endl;*/
 
 		//the detected car probably is defined with the points that form the biggest angle and are wider than 1m
 		int points = 0;
@@ -689,7 +675,9 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 #ifdef PRINT
 	std::cout<<"Extracted " << toPlot.size() << " Vehicles from Data" << std::endl;
 #endif
+#ifdef VISUALIZE
 	visualizer.visualizeVehiclesAsRectangle(toPlot, number);
+#endif
 	return vehicles;
 }
 

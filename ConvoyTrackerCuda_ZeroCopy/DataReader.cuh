@@ -58,7 +58,7 @@ private:
 	double* dist;
 	double* thresh;
 
-	cudaStream_t stream1;
+	cudaStream_t stream0, stream1;
 
 	raw_segment* raw_segments;
 	cartesian_segment* car_segments;
