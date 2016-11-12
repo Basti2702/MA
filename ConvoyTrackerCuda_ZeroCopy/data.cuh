@@ -113,6 +113,7 @@ typedef struct Convoy{
 	int startIndexID;
 	int endIndexTracks;
 	int endIndexID;
+	EMLPos highestValue;
 
 } Convoy;
 

@@ -454,6 +454,9 @@ int main()
 		double deltaX = tracker.getX() - tracker.getXOld();
 		double deltaY = tracker.getY() - tracker.getYOld();
 		double deltaYaw = tracker.getYaw() - tracker.getYawOld();
+		double angleInRadians = deltaYaw * M_PI / 180;
+		double mat[2][2] = { { cos(angleInRadians), -sin(angleInRadians) },
+				{ sin(angleInRadians), cos(angleInRadians) } };
 
 			if(tracker.historySize > 0)
 			{
@@ -463,6 +466,25 @@ int main()
 			if(tracker.convoySize > 0)
 			{
 				compensateEgoMotionConvoy<<<tracker.convoySize, MAX_LENGTH_HIST_CONV,0, stream2>>>(tracker.d_convoys_ptr, deltaX, deltaY, deltaYaw);
+				for(uint i = 0; i < tracker.convoySize; i++)
+				{
+					tracker.convoys[i].highestValue.subIntvl += deltaX;
+					int numIntervals = (int) ((tracker.convoys[i].highestValue.subIntvl) / INTERVALL_LENGTH);
+					tracker.convoys[i].highestValue.x -= numIntervals;
+					tracker.convoys[i].highestValue.subIntvl -= numIntervals;
+
+					tracker.convoys[i].highestValue.y -= deltaY;
+					tracker.convoys[i].highestValue.theta -= angleInRadians;
+
+					double xAbs = tracker.convoys[i].highestValue.x;
+					double yAbs = tracker.convoys[i].highestValue.y;
+
+					xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
+					yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
+
+					tracker.convoys[i].highestValue.y -= yAbs;
+					tracker.convoys[i].highestValue.subIntvl -= xAbs;
+				}
 			}
 			if(tracker.intervalSize > 0)
 			{
@@ -757,10 +779,9 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 			PointCellDevice* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			PointCellDevice* update = trackedVehicles.at(minIndex);
-			int intvl = floor(update->getX());
-			intvl += CARINTERVAL;
 			update->update(vehicles.at(i).data);
-			update->setX((intvl-CARINTERVAL) + 0.5);
+			int intvl = floor(update->getX());
+			update->setX(intvl+ 0.5);
 		//	findConvoy(*update);
 #ifdef PRINT
 			std::cout << "Update ID " << update->getID() << std::endl;
@@ -769,7 +790,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 #ifdef PRINT
 			std::cout << "HistoryIndex " << historyIndex << std::endl;
 #endif
-			if(checkHistoryForDuplicate((intvl-CARINTERVAL) + 0.5, historyIndex))
+			if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
 			{
 				int index = history[historyIndex].endIndex;
 				history[historyIndex].tracks[index].subIntvl = 0.5;
@@ -782,7 +803,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 				{
 					history[historyIndex].startIndex = (history[historyIndex].startIndex+1)%NUM_HIST;
 				}
-	//			std::cout << "Added Vehicle to History with Index" << historyIndex  << " HistorySize: "  << historySize << std::endl;
 				currentHistoryOnDevice = false;
 			}
 			trackedVehicles.at(minIndex) = tmp;
@@ -869,6 +889,13 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							{
 								convoys[j].startIndexTracks = (convoys[j].startIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 							}
+							if(interval+0.5 > convoys[j].highestValue.x)
+							{
+								convoys[j].highestValue.x = interval+0.5;
+								convoys[j].highestValue.y = vehicle.getY();
+								convoys[j].highestValue.theta = vehicle.getTheta();
+								convoys[j].highestValue.subIntvl = 0.5;
+							}
 						}
 						convoyFound = true;
 #ifdef PRINT
@@ -890,6 +917,13 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							if(index == convoys[j].startIndexTracks)
 							{
 								convoys[j].startIndexTracks = (convoys[j].startIndexTracks+1)%MAX_LENGTH_HIST_CONV;
+							}
+							if(interval+0.5 > convoys[j].highestValue.x)
+							{
+								convoys[j].highestValue.x = interval+0.5;
+								convoys[j].highestValue.y = vehicle.getY();
+								convoys[j].highestValue.theta = vehicle.getTheta();
+								convoys[j].highestValue.subIntvl = 0.5;
 							}
 						}
 						int IDindex = (currentConvoy.endIndexID+1)%MAX_LENGTH_HIST_CONV;
@@ -920,6 +954,13 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							if(index == convoys[j].startIndexTracks)
 							{
 								convoys[j].startIndexTracks = (convoys[j].startIndexTracks+1)%MAX_LENGTH_HIST_CONV;
+							}
+							if(interval+0.5 > convoys[j].highestValue.x)
+							{
+								convoys[j].highestValue.x = interval+0.5;
+								convoys[j].highestValue.y = vehicle.getY();
+								convoys[j].highestValue.theta = vehicle.getTheta();
+								convoys[j].highestValue.subIntvl = 0.5;
 							}
 						}
 						int IDindex = (currentConvoy.endIndexID+1)%MAX_LENGTH_HIST_CONV;
@@ -952,6 +993,11 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					convoys[cIndex].tracks[0].theta = vehicle.getTheta();
 					convoys[cIndex].tracks[0].subIntvl = 0.5;
 					endIndexConvoys = (endIndexConvoys+1)%NUM_CONV;
+					convoys[cIndex].highestValue.x = interval+0.5;
+					convoys[cIndex].highestValue.y = vehicle.getY();
+					convoys[cIndex].highestValue.theta = vehicle.getTheta();
+					convoys[cIndex].highestValue.subIntvl = 0.5;
+
 					if(convoySize == NUM_CONV)
 					{
 						startIndexConvoys = (startIndexConvoys+1)%NUM_CONV;
@@ -1376,7 +1422,7 @@ void ConvoyTracker::transformDataFromDevice()
 		{
 			end = MAX_LENGTH_HIST_CONV-1;
 		}
-		if(convoys[i].tracks[end].x < -5)
+		if(convoys[i].highestValue.x < -5)
 		{
 #ifdef PRINT
 			std::cout << "delete convoy with ID " << convoys[i].ID << std::endl;
@@ -1399,7 +1445,7 @@ void ConvoyTracker::transformDataFromDevice()
 		}
 	}
 
-/*	toDelete.clear();
+	toDelete.clear();
 	for(uint i=0; i<intervalSize;i++)
 	{
 		if(h_intervalMap[i].getX() < -100)
@@ -1413,7 +1459,7 @@ void ConvoyTracker::transformDataFromDevice()
 		{
 			h_intervalMap[toDelete.at(i)] = h_intervalMap[--intervalSize];
 		}
-	}*/
+	}
 }
 
 /*
@@ -1480,6 +1526,13 @@ void ConvoyTracker::findConvoySelf(int ID)
 				{
 					convoys[j].startIndexTracks = (convoys[j].startIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 				}
+				if(interval+0.5 > convoys[j].highestValue.x)
+				{
+					convoys[j].highestValue.x = 0.5;
+					convoys[j].highestValue.y = 0;
+					convoys[j].highestValue.theta = 0;
+					convoys[j].highestValue.subIntvl = 0.5;
+				}
 			}
 			convoyFound = true;
 #ifdef PRINT
@@ -1501,6 +1554,13 @@ void ConvoyTracker::findConvoySelf(int ID)
 				if(index == convoys[j].startIndexTracks)
 				{
 					convoys[j].startIndexTracks = (convoys[j].startIndexTracks+1)%MAX_LENGTH_HIST_CONV;
+				}
+				if(interval+0.5 > convoys[j].highestValue.x)
+				{
+					convoys[j].highestValue.x = 0.5;
+					convoys[j].highestValue.y = 0;
+					convoys[j].highestValue.theta = 0;
+					convoys[j].highestValue.subIntvl = 0.5;
 				}
 			}
 			int IDindex = (currentConvoy.endIndexID+1)%MAX_LENGTH_HIST_CONV;
@@ -1534,6 +1594,11 @@ void ConvoyTracker::findConvoySelf(int ID)
 		convoys[cIndex].tracks[0].theta = 0;
 		convoys[cIndex].tracks[0].subIntvl = 0.5;
 		endIndexConvoys = (endIndexConvoys+1)%NUM_CONV;
+		convoys[cIndex].highestValue.x = 0.5;
+		convoys[cIndex].highestValue.y = 0;
+		convoys[cIndex].highestValue.theta = 0;
+		convoys[cIndex].highestValue.subIntvl = 0.5;
+
 		if(convoySize == NUM_CONV)
 		{
 			startIndexConvoys = (startIndexConvoys+1)%NUM_CONV;
