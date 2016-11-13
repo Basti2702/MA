@@ -37,22 +37,16 @@ private:
 	double currentYawRate;
 	cartesian_segment* d_carSegs_ptr;
 	raw_segment* d_rawSegs_ptr;
-//	laserdata_cartesian* d_carLaser;
-//	PointCellDevice* d_vehicles;
-//	std::vector<double*> d_vehicleData;
-//	std::vector<laserdata_cartesian*> d_carMeasure;
-//	std::vector<laserdata_raw*> d_rawMeasure;
 	unsigned long long* d_minDistance_ptr;
 	unsigned int* d_index_ptr;
 
 	unsigned int* h_index;
 	unsigned long long* h_minDistance;
-//	laserdata_raw* d_data;
 	laserdata_raw* d_data_ptr;
 	laserdata_raw* h_data;
-//	double* d_dist;
+	laserdata_cartesian* h_relMeas;
+	laserdata_cartesian* d_relMeas_ptr;
 	double* d_dist_ptr;
-//	double* d_thresh;
 	double* d_thresh_ptr;
 
 	double* dist;

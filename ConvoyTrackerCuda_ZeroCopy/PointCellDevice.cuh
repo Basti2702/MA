@@ -67,9 +67,10 @@ public:
 	__host__ __device__ double getS(int row, int col);
 	__host__ __device__ double getTmp(int row, int col);
 	__host__ __device__ double getTmp2(int row, int col);
+	__host__ __device__ void invertS();
 
 private:
-	__host__ __device__ void invertS();
+
 	__host__ __device__ void reducedRowEcholon(double* toInvert);
 	__host__ __device__ void reorder(double* toInvert, int* order);
 	__host__ __device__ void divideRow(double* toInvert, int row, double divisor);

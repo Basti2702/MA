@@ -374,6 +374,104 @@ __global__ void predict(PointCellDevice* d_interval)
 {
 	predictDevice(&(d_interval[blockIdx.x]), threadIdx.x);
 }
+
+/*
+ * Run Kalman-Filter Update on Device with 25 Threads
+ */
+__global__ void updateDevice(PointCellDevice* d_interval, int index, double velocity, double phi, double xNew, double yNew, double thetaNew)
+{
+	//row
+	int i = threadIdx.x / 5;
+	//column
+	int j = threadIdx.x % 5;
+
+	double tmp = 0;
+
+	//tmp = H*P
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getH(i,k)*d_interval[index].getP(k,j);
+	}
+	d_interval[index].writeTmp(i,j, tmp);
+	__syncthreads();
+	//S = tmp*H_t
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getTmp(i,k)*d_interval[index].getH(j,k);
+	}
+	d_interval[index].writeS(i,j, tmp);
+	__syncthreads();
+	//S = S+R
+	tmp = d_interval[index].getS(i,j) + d_interval[index].getR(i,j);
+	d_interval[index].writeS(i,j, tmp);
+	__syncthreads();
+	//tmp = P*H_t
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getP(i,k)*d_interval[index].getH(j,k);
+	}
+	d_interval[index].writeTmp(i,j, tmp);
+	__syncthreads();
+	//invertS
+	if(threadIdx.x == 0)
+	{
+		d_interval[index].invertS();
+	}
+	__syncthreads();
+	//K = tmp*S_i
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getTmp(i,k)*d_interval[index].getS(k,j);
+	}
+	d_interval[index].writeK(i,j, tmp);
+	__syncthreads();
+	//tmp = K*(newState-stateVector)
+	tmp = 0;
+	tmp += d_interval[index].getK(i,0)*(xNew-d_interval[index].getX());
+	tmp += d_interval[index].getK(i,1)*(yNew-d_interval[index].getY());
+	tmp += d_interval[index].getK(i,2)*(thetaNew-d_interval[index].getTheta());
+	tmp += d_interval[index].getK(i,3)*(velocity-d_interval[index].getVelocity());
+	tmp += d_interval[index].getK(i,4)*(phi-d_interval[index].getPhi());
+	d_interval[index].writeTmp(i,j, tmp);
+	__syncthreads();
+	//stateVector = stateVector + tmp
+	d_interval[index].setX(d_interval[index].getX() + d_interval[index].getTmp(0,0));
+	d_interval[index].setY(d_interval[index].getY() + d_interval[index].getTmp(1,0));
+	d_interval[index].setTheta(d_interval[index].getTheta() + d_interval[index].getTmp(2,0));
+	d_interval[index].setVelocity(d_interval[index].getVelocity() + d_interval[index].getTmp(3,0));
+	d_interval[index].setPhi(d_interval[index].getPhi() + d_interval[index].getTmp(4,0));
+	__syncthreads();
+	//tmp = K*H
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getK(i,k)*d_interval[index].getH(k,j);
+	}
+	d_interval[index].writeTmp(i,j, tmp);
+	__syncthreads();
+	//tmp = I- tmp
+	tmp = d_interval[index].getI(i,j) - d_interval[index].getTmp(i,j);
+	d_interval[index].writeTmp(i,j, tmp);
+	__syncthreads();
+	//tmp2 = tmp*P
+	tmp = 0;
+	for(int k=0; k<5; k++)
+	{
+		tmp += d_interval[index].getTmp(i,k)*d_interval[index].getP(k,j);
+	}
+	d_interval[index].writeTmp2(i,j, tmp);
+	d_interval[index].writeP(i,j, d_interval[index].getTmp2(i,j));
+}
+
+
+__global__ void findIDInConyoDevice(Convoy* d_convoy, int* d_historyMatch, PointCellDevice* d_vehicleCheck)
+{
+
+}
+
 int main()
 {
 #ifdef CREATE_MEASURES
@@ -779,6 +877,21 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 			PointCellDevice* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			PointCellDevice* update = trackedVehicles.at(minIndex);
+	/*		double velocity, phi;
+			double xNew = vehicles.at(i).data[0];
+			double yNew = vehicles.at(i).data[1];
+			double thetaNew = vehicles.at(i).data[2];
+
+			double x = update->data[5];
+			double y = update->data[6];
+			double theta = update->data[7];
+			velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
+			phi = (thetaNew-theta) / TIMESTAMP;
+
+			update->setVelocity(velocity);
+			update->setPhi(phi);
+			updateDevice<<<1,25>>>(d_intervalMap_ptr, minIndex,velocity, phi, xNew, yNew, thetaNew);
+			cudaDeviceSynchronize();*/
 			update->update(vehicles.at(i).data);
 			int intvl = floor(update->getX());
 			update->setX(intvl+ 0.5);
@@ -823,12 +936,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 		//delete all tracks that could not be matched
 		for(uint m = 0; m < intervalSize; m++)
 		{
-			/*if(tmp == &intervalMap.at(m))
-			{
-				intervalMap.at(m) = intervalMap.at(intervalMap.size()-1);
-				intervalMap.pop_back();
-				break;
-			}*/
 			if(tmp == &h_intervalMap[m])
 			{
 				h_intervalMap[m] = h_intervalMap[--intervalSize];
@@ -839,7 +946,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 	for(uint k = 0; k < indicesToAdd.size(); k++)
 	{
-	//	intervalMap.push_back(vehicles.at(indicesToAdd.at(k)));
 		if(intervalSize < MAX_SEGMENTS)
 		{
 			h_intervalMap[intervalSize++] = vehicles.at(indicesToAdd.at(k));
@@ -850,7 +956,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 	{
 		dim3 grid(historySize, convoyCheckSize);
 		findConvoyDevice<<<grid, MAX_LENGTH_HIST_CONV>>>(d_newVeh_ptr,d_history_ptr,d_historyMatch_ptr);
-//		insertIndex<<<grid, MAX_LENGTH_HIST_CONV>>>(d_history_ptr,d_historyMatch_ptr,d_historyIDs_ptr);
 		cudaDeviceSynchronize();
 		for(uint i=0; i<convoyCheckSize;i++)
 		{

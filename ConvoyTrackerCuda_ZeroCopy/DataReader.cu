@@ -37,6 +37,18 @@ DataReader::DataReader() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
+	error = cudaHostAlloc((void**) &h_relMeas, MAX_SEGMENTS*3*sizeof(laserdata_cartesian), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_relMeas_ptr, h_relMeas, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
 	error = cudaHostAlloc((void**) &thresh, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocMapped);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
@@ -97,7 +109,6 @@ DataReader::~DataReader() {
 	cudaStreamDestroy(stream1);
 	cudaStreamDestroy(stream0);
 }
-
 __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian* d_laser, unsigned long long* dist)
 {
 //	printf("Block %d entered Min\n", blockIdx.x);
@@ -115,9 +126,6 @@ __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian*
 		if(dist[blockIdx.x] == tmp)
 		{
 			d_laser[index+1] = carSegs[blockIdx.x].measures[threadIdx.x];
-#ifdef PRINT
-			printf("Block %d Completed Min\n", blockIdx.x);
-#endif
 		}
 	}
 }
@@ -468,7 +476,10 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	}
 	processDist<<<1,numElements-1,0,stream1>>>(d_data_ptr, d_dist_ptr);
 	processThresh<<<1, numElements-1,0, stream0>>>(d_data_ptr,d_thresh_ptr);
-
+	for(int i=0; i<MAX_SEGMENTS; i++)
+	{
+		h_minDistance[i] = INT_MAX;
+	}
 
 	int segment_counter = 0;
 	int data_counter = 0;
@@ -520,9 +531,11 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 #endif
 	coordinateTransform<<<segment_counter,NUMBER_LASERRAYS,0,stream1>>>(d_rawSegs_ptr, d_carSegs_ptr);
 	cudaStreamSynchronize(stream1);
+	getRelevantMeas<<<segment_counter, NUMBER_LASERRAYS,0,stream0>>>(d_carSegs_ptr,d_relMeas_ptr,d_minDistance_ptr);
 #ifdef VISUALIZE
 	visualizer.visualizeSegmentsAsPointCloud(car_segments, number, segment_counter);
 #endif
+	cudaStreamSynchronize(stream0);
 	std::vector<PointCellDevice> vehicles = computeVehicleState(car_segments, segment_counter, number);
 	return vehicles;
 }
@@ -565,15 +578,12 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 {
 	std::vector<PointCellDevice> vehicles;
 
-
-	cartesian_segment currentSegment;
-	std::vector<laserdata_cartesian> relevantPoints;
+	laserdata_cartesian* relevantPoints;
 	std::vector<std::vector<laserdata_cartesian> > toPlot;
 
 	for(uint i=0; i<segmentCounter; i++)
 	{
-		currentSegment = segments[i];
-		relevantPoints = getRelevantMeasuresFromSegment(currentSegment);
+		relevantPoints = &h_relMeas[i*3];
 
 		//we have three different points, compute bounds
 
@@ -669,7 +679,11 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 			vehicle.setPhi(currentYawRate); //yaw rate
 			vehicle.subInvtl = 0.5;
 			vehicles.push_back(vehicle);
-			toPlot.push_back(relevantPoints);
+			std::vector<laserdata_cartesian> tmp;
+			tmp.push_back(relevantPoints[0]);
+			tmp.push_back(relevantPoints[1]);
+			tmp.push_back(relevantPoints[2]);
+			toPlot.push_back(tmp);
 		}
 	}
 #ifdef PRINT
