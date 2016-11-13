@@ -1008,7 +1008,14 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 #endif
 						break;
 					}
-					else if (it1 != INT_MAX)
+				}
+				for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
+				{
+					int it1, it2;
+					Convoy currentConvoy = convoys[j];
+					it1 = findIDinConvoy(currentConvoy, id1);
+					it2 = findIDinConvoy(currentConvoy, id2);
+					if (it1 != INT_MAX)
 					{
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 						//check if this x value is already contained
@@ -1047,6 +1054,11 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					}
 					else if (it2 != INT_MAX)
 					{
+						//only add position to convoy if it will be the highest value or the difference in y is not so big
+						if(interval+0.5 < convoys[j].highestValue.x && !checkConvoyForY(vehicle.getY(),interval +0.5,currentConvoy))
+						{
+							continue;
+						}
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 						//check if this x value is already contained
 						if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
@@ -1716,4 +1728,27 @@ void ConvoyTracker::findConvoySelf(int ID)
 		std::cout << "new Convoy with ID " << convoyID-1 << " containing "<< id1 << " , " << id2 << std::endl;
 #endif
 	}
+}
+
+bool ConvoyTracker::checkConvoyForY(double y, double x, Convoy c)
+{
+	double min = INT_MAX;
+	double dist;
+	int index;
+	for(int i=c.startIndexTracks; i != c.endIndexTracks; i = (i+1)%MAX_LENGTH_HIST_CONV)
+	{
+		dist = fabs(c.tracks[i].x - x);
+		if(dist < min)
+		{
+			min = dist;
+			index = i;
+		}
+	}
+
+	dist = fabs(c.tracks[index].y - y);
+	if(dist > CONVOY_THRESHOLD_Y)
+	{
+		return false;
+	}
+	return true;
 }

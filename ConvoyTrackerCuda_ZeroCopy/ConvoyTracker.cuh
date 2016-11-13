@@ -110,6 +110,7 @@ private:
 	bool checkHistoryForDuplicate(double x, int historyIndex);
 	int findIDinConvoy(Convoy c, int id);
 	int findHistoryWithID(int id);
+	bool checkConvoyForY(double y, double x, Convoy c);
 
 };
 

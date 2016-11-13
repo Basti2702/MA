@@ -19,6 +19,7 @@
 #define NUM_HIST 196
 #define NUM_CONV 20
 #define MAX_SEGMENTS 193
+#define CONVOY_THRESHOLD_Y 2
 
 //#define PRINT
 #define VISUALIZE
@@ -35,7 +36,7 @@
  *
  * Szenario 5: Convoys on both sides of the car, 1000 iterations
  */
-#define SZENARIO 5
+#define SZENARIO 1
 
 #if SZENARIO == 1
 /*
