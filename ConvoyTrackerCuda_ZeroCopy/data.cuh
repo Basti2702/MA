@@ -36,7 +36,7 @@
  *
  * Szenario 5: Convoys on both sides of the car, 1000 iterations
  */
-#define SZENARIO 1
+#define SZENARIO 5
 
 #if SZENARIO == 1
 /*

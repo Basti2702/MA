@@ -92,6 +92,18 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
+	error = cudaHostAlloc((void**) &h_IDincluded, NUM_CONV*2*sizeof(int), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_IDincluded_ptr, h_IDincluded, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
 	size_t sizeConv = NUM_CONV;
 	sizeConv *= sizeof(Convoy);
 	error = cudaHostAlloc((void **) &convoys, sizeConv, cudaHostAllocMapped);
@@ -132,6 +144,7 @@ ConvoyTracker::~ConvoyTracker() {
 	cudaFreeHost(h_convoyCheck);
 	cudaFreeHost(h_intervalMap);
 	cudaFreeHost(h_historyMatchSelf);
+	cudaFreeHost(h_IDincluded);
 }
 
 
@@ -467,9 +480,27 @@ __global__ void updateDevice(PointCellDevice* d_interval, int index, double velo
 }
 
 
-__global__ void findIDInConyoDevice(Convoy* d_convoy, int* d_historyMatch, PointCellDevice* d_vehicleCheck)
+__global__ void findIDInConvoyDevice(Convoy* d_convoy, int* d_IDIncluded, int id1, int id2)
 {
-
+	if(((threadIdx.x < d_convoy[blockIdx.x].endIndexID)  && (d_convoy[blockIdx.x].endIndexID > d_convoy[blockIdx.x].startIndexID)) || ((d_convoy[blockIdx.x].endIndexID < d_convoy[blockIdx.x].startIndexID) && (threadIdx.x != d_convoy[blockIdx.x].endIndexID)))
+	{
+		int index = blockIdx.x*2;
+		d_IDIncluded[index] = INT_MAX;
+		d_IDIncluded[index+1] = INT_MAX;
+		__syncthreads();
+		int result = (d_convoy[blockIdx.x].participatingVehicles[threadIdx.x] == id1);
+		if(result)
+		{
+			atomicMin(&(d_IDIncluded[index]), threadIdx.x);
+//	     	printf("Convoy %d with %d endIndexID and %d startIndexID from threadIDx %d matches ID1\n", d_convoy[blockIdx.x].ID, d_convoy[blockIdx.x].endIndexID, d_convoy[blockIdx.x].startIndexID, threadIdx.x);
+		}
+		result = (d_convoy[blockIdx.x].participatingVehicles[threadIdx.x] == id2);
+		if(result)
+		{
+			atomicMin(&(d_IDIncluded[index+1]), threadIdx.x);
+//			printf("Convoy %d with %d endIndexID and %d startIndexID from threadIDx %d matches ID2\n", d_convoy[blockIdx.x].ID, d_convoy[blockIdx.x].endIndexID, d_convoy[blockIdx.x].startIndexID, threadIdx.x);
+		}
+	}
 }
 
 int main()
@@ -971,12 +1002,23 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 				std::cout << "ID1 " << id1  << " ID2 " << id2 << std::endl;
 #endif
 				bool convoyFound = false;
+				if(convoySize >0)
+				{
+					findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV>>>(d_convoys_ptr, d_IDincluded_ptr,id1,id2);
+					cudaDeviceSynchronize();
+				}
 				for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
 				{
-					int it1, it2;
+			//		int it1, it2;
 					Convoy currentConvoy = convoys[j];
-					it1 = findIDinConvoy(currentConvoy, id1);
-					it2 = findIDinConvoy(currentConvoy, id2);
+			//		it1 = findIDinConvoy(currentConvoy, id1);
+			//		it2 = findIDinConvoy(currentConvoy, id2);
+					int it1 = d_IDincluded_ptr[j*2];
+					int it2 = d_IDincluded_ptr[j*2+1];
+				/*	if(it1 != it11 || it2 != it21)
+					{
+						std::cout << "Included CPU 1: " << it1 << " CPU2: " << it2 << " GPU1: " << it11 << " GPU2: " << it21 << std::endl;
+					}*/
 					if(it1 != INT_MAX && it2 != INT_MAX)
 					{
 						//convoy already exists with both IDS
@@ -1009,12 +1051,18 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						break;
 					}
 				}
+				if(convoyFound)
+				{
+					continue;
+				}
 				for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
 				{
-					int it1, it2;
+		//			int it1, it2;
 					Convoy currentConvoy = convoys[j];
-					it1 = findIDinConvoy(currentConvoy, id1);
-					it2 = findIDinConvoy(currentConvoy, id2);
+		//			it1 = findIDinConvoy(currentConvoy, id1);
+		//			it2 = findIDinConvoy(currentConvoy, id2);
+					int it1 = d_IDincluded_ptr[j*2];
+					int it2 = d_IDincluded_ptr[j*2+1];
 					if (it1 != INT_MAX)
 					{
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
@@ -1039,7 +1087,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 							}
 						}
 						int IDindex = (currentConvoy.endIndexID+1)%MAX_LENGTH_HIST_CONV;
-						convoys[j].participatingVehicles[currentConvoy.endIndexID] = vehicle.getID();
+						convoys[j].participatingVehicles[currentConvoy.endIndexID] = id2;
 						convoys[j].endIndexID = IDindex;
 						if(IDindex == convoys[j].startIndexID)
 						{

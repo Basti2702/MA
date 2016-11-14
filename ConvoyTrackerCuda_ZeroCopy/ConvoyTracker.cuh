@@ -48,6 +48,8 @@ public:
 
 	double* xSubInterval;
 	double* d_subIntvl_ptr;
+	int* h_IDincluded;
+	int* d_IDincluded_ptr;
 
 	History* history;
 	int startIndexHistory;
