@@ -31,6 +31,10 @@ ConvoyTracker::ConvoyTracker() {
 
 	cudaError_t error;
 
+	cudaStreamCreate(&stream2);
+	cudaStreamCreate(&stream3);
+	cudaStreamCreate(&stream4);
+
 	error = cudaHostAlloc((void**) &history, NUM_HIST*sizeof(History), cudaHostAllocMapped);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
@@ -104,6 +108,18 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
+	error = cudaHostAlloc((void**) &h_duplicate, NUM_CONV*sizeof(bool), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_duplicate_ptr, h_duplicate, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
 	size_t sizeConv = NUM_CONV;
 	sizeConv *= sizeof(Convoy);
 	error = cudaHostAlloc((void **) &convoys, sizeConv, cudaHostAllocMapped);
@@ -145,6 +161,9 @@ ConvoyTracker::~ConvoyTracker() {
 	cudaFreeHost(h_intervalMap);
 	cudaFreeHost(h_historyMatchSelf);
 	cudaFreeHost(h_IDincluded);
+	cudaStreamDestroy(stream2);
+	cudaStreamDestroy(stream3);
+	cudaStreamDestroy(stream4);
 }
 
 
@@ -357,9 +376,6 @@ __global__ void findConvoyDevice(PointCellDevice* trackedVehicles, History* d_hi
 	{
 		if(findHistoryMatch(&(trackedVehicles[blockIdx.y]),&(d_history[blockIdx.x]),threadIdx.x))
 		{
-	#ifdef PRINT
-			printf("TrackedID %d, HistoryID %d, Index %d\n", trackedVehicles[blockIdx.y].getID(), d_history[blockIdx.x].ID);
-	#endif
 			atomicMin(&(d_historyMatch[blockIdx.y]), d_history[blockIdx.x].ID);
 		}
 	}
@@ -492,13 +508,24 @@ __global__ void findIDInConvoyDevice(Convoy* d_convoy, int* d_IDIncluded, int id
 		if(result)
 		{
 			atomicMin(&(d_IDIncluded[index]), threadIdx.x);
-//	     	printf("Convoy %d with %d endIndexID and %d startIndexID from threadIDx %d matches ID1\n", d_convoy[blockIdx.x].ID, d_convoy[blockIdx.x].endIndexID, d_convoy[blockIdx.x].startIndexID, threadIdx.x);
 		}
 		result = (d_convoy[blockIdx.x].participatingVehicles[threadIdx.x] == id2);
 		if(result)
 		{
 			atomicMin(&(d_IDIncluded[index+1]), threadIdx.x);
-//			printf("Convoy %d with %d endIndexID and %d startIndexID from threadIDx %d matches ID2\n", d_convoy[blockIdx.x].ID, d_convoy[blockIdx.x].endIndexID, d_convoy[blockIdx.x].startIndexID, threadIdx.x);
+		}
+	}
+}
+
+__global__ void checkConvoyForDuplicateDevice(Convoy* d_convoy, PointCellDevice* d_vehicle, bool* d_duplicate)
+{
+	if(((threadIdx.x < d_convoy[blockIdx.x].endIndexTracks)  && (d_convoy[blockIdx.x].endIndexTracks > d_convoy[blockIdx.x].startIndexTracks)) || ((d_convoy[blockIdx.x].endIndexTracks < d_convoy[blockIdx.x].startIndexTracks) && (threadIdx.x != d_convoy[blockIdx.x].endIndexTracks)))
+	{
+		d_duplicate[blockIdx.x] = true;
+		bool result = (d_convoy[blockIdx.x].tracks[threadIdx.x].x != (floor(d_vehicle->getX())+0.5));
+		if(!result)
+		{
+			d_duplicate[blockIdx.x] = d_duplicate[blockIdx.x] && result;
 		}
 	}
 }
@@ -560,10 +587,29 @@ int main()
 	cudaSetDeviceFlags(cudaDeviceMapHost);
 
 	cudaEvent_t startEvent, stopEvent, start2Event, stop2Event;
-	cudaStream_t stream2, stream3, stream4;
-	cudaStreamCreate(&stream2);
-	cudaStreamCreate(&stream3);
-	cudaStreamCreate(&stream4);
+
+	std::vector<PointCellDevice> vehiclesSim;
+	for(uint i=0;i <20; i++)
+	{
+		PointCellDevice tmp;
+		if(i%2 == 0)
+		{
+			tmp.setY(-3);
+			tmp.setVelocity(38.9);
+		}
+		else
+		{
+			tmp.setY(3);
+			tmp.setVelocity(27.8);
+		}
+		tmp.setX((i/2)*8);
+		tmp.setTheta(0);
+		tmp.setPhi(0);
+		vehiclesSim.push_back(tmp);
+	//	std::cout << "x: " << tmp.getX() << " y: " << tmp.getY() << " theta: " << tmp.getTheta() << " Vel: " << tmp.getVelocity() << " Phi: " << tmp.getPhi() << std::endl;
+
+	}
+
 	cudaEventCreate(&startEvent);
 	cudaEventCreate(&stopEvent);
 	cudaEventCreate(&start2Event);
@@ -589,12 +635,12 @@ int main()
 
 			if(tracker.historySize > 0)
 			{
-				compensateEgoMotionHistory<<<tracker.historySize, MAX_LENGTH_HIST_CONV,0, stream4>>>(tracker.d_history_ptr, deltaX, deltaY, deltaYaw);
+				compensateEgoMotionHistory<<<tracker.historySize, MAX_LENGTH_HIST_CONV,0, tracker.stream4>>>(tracker.d_history_ptr, deltaX, deltaY, deltaYaw);
 			}
 			vehicles = tracker.reader.processLaserData(number,tracker.getCurrentSpeed(), tracker.getCurrentYawRate());
 			if(tracker.convoySize > 0)
 			{
-				compensateEgoMotionConvoy<<<tracker.convoySize, MAX_LENGTH_HIST_CONV,0, stream2>>>(tracker.d_convoys_ptr, deltaX, deltaY, deltaYaw);
+				compensateEgoMotionConvoy<<<tracker.convoySize, MAX_LENGTH_HIST_CONV,0, tracker.stream2>>>(tracker.d_convoys_ptr, deltaX, deltaY, deltaYaw);
 				for(uint i = 0; i < tracker.convoySize; i++)
 				{
 					tracker.convoys[i].highestValue.subIntvl += deltaX;
@@ -620,8 +666,8 @@ int main()
 //			tracker.shiftStructure(deltaX);
 //				tracker.rotateStructure(deltaYaw, deltaY);
 
-				compensateEgoMotionMap<<<1,tracker.intervalSize,0,stream3>>>(tracker.d_intervalMap_ptr, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
-				predict<<<tracker.intervalSize,25,0,stream3>>>(tracker.d_intervalMap_ptr);
+				compensateEgoMotionMap<<<1,tracker.intervalSize,0,tracker.stream3>>>(tracker.d_intervalMap_ptr, tracker.d_subIntvl_ptr, deltaX, deltaY, deltaYaw);
+				predict<<<tracker.intervalSize,25,0,tracker.stream3>>>(tracker.d_intervalMap_ptr);
 
 			}
 
@@ -646,14 +692,18 @@ int main()
 			predict<<<tracker.intervalSize,25,0,stream3>>>(tracker.d_intervalMap_ptr);
 		}*/
 		tracker.transformDataFromDevice();
-		cudaStreamSynchronize(stream3);
+		cudaStreamSynchronize(tracker.stream3);
 		for(uint j=0; j<tracker.intervalSize;j++)
 		{
 		//	tracker.h_intervalMap[j].predict();
 			trackedVehicles.push_back(&(tracker.h_intervalMap[j]));
 		}
 		//3. Associate and Update
+#if SZENARIO == 6
+		tracker.associateAndUpdate(vehiclesSim, trackedVehicles);
+#else
 		tracker.associateAndUpdate(vehicles, trackedVehicles);
+#endif
 		cudaEventRecord(stop2Event, 0);
 		cudaEventSynchronize(stop2Event);
 		 float time;
@@ -662,9 +712,7 @@ int main()
 	}
 	cudaEventRecord(stopEvent, 0);
 	cudaEventSynchronize(stopEvent);
-	cudaStreamDestroy(stream2);
-	cudaStreamDestroy(stream3);
-	cudaStreamDestroy(stream4);
+
 	float sumH = 0;
 
 	for(int i = 0; i< NUM_MEASUREMENT; i++)
@@ -1004,7 +1052,8 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 				bool convoyFound = false;
 				if(convoySize >0)
 				{
-					findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV>>>(d_convoys_ptr, d_IDincluded_ptr,id1,id2);
+					findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream3>>>(d_convoys_ptr, d_IDincluded_ptr,id1,id2);
+					checkConvoyForDuplicateDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream2>>>(d_convoys_ptr, &(d_newVeh_ptr[i]),d_duplicate_ptr);
 					cudaDeviceSynchronize();
 				}
 				for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
@@ -1023,7 +1072,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					{
 						//convoy already exists with both IDS
 						//check if this x value is already contained
-						if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+						if(h_duplicate[j]/*checkConvoyForDuplicate(interval+0.5, currentConvoy)*/)
 						{
 							//x value is not contained
 							int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
@@ -1046,7 +1095,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
 #endif
 						break;
 					}
@@ -1067,7 +1116,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					{
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 						//check if this x value is already contained
-						if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+						if(h_duplicate[j]/*checkConvoyForDuplicate(interval+0.5, currentConvoy)*/)
 						{
 							convoys[j].tracks[currentConvoy.endIndexTracks].x = interval+0.5;
 							convoys[j].tracks[currentConvoy.endIndexTracks].y = vehicle.getY();
@@ -1095,7 +1144,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
 #endif
 						break;
 
@@ -1109,7 +1158,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						}
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 						//check if this x value is already contained
-						if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+						if(h_duplicate[j]/*checkConvoyForDuplicate(interval+0.5, currentConvoy)*/)
 						{
 							convoys[j].tracks[currentConvoy.endIndexTracks].x = interval+0.5;
 							convoys[j].tracks[currentConvoy.endIndexTracks].y = vehicle.getY();
@@ -1137,7 +1186,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
 #endif
 						break;
 					}

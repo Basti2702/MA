@@ -35,8 +35,10 @@
  * Szenario 4: own car is changing the lane
  *
  * Szenario 5: Convoys on both sides of the car, 1000 iterations
+ *
+ * Szenario 6: Same as Scenario 5, but with 20 simulated cars
  */
-#define SZENARIO 5
+#define SZENARIO 6
 
 #if SZENARIO == 1
 /*
@@ -75,6 +77,11 @@
 	#define MEASUREPATH "./Laserdata/Szenario5/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario5/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario5"
+#elif SZENARIO == 6
+	#define NUM_MEASUREMENT 1000
+	#define MEASUREPATH "./Laserdata/Szenario5/Measure/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario5/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario6"
 #endif
 
 

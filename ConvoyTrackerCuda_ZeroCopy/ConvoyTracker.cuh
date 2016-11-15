@@ -50,6 +50,8 @@ public:
 	double* d_subIntvl_ptr;
 	int* h_IDincluded;
 	int* d_IDincluded_ptr;
+	bool* h_duplicate;
+	bool* d_duplicate_ptr;
 
 	History* history;
 	int startIndexHistory;
@@ -61,6 +63,7 @@ public:
 	int endIndexConvoys;
 	int convoySize;
 
+	cudaStream_t stream2, stream3, stream4;
 
 	void readEMLData(std::string number);
 	void associateAndUpdate(std::vector<PointCellDevice> vehicles, std::vector<PointCellDevice*> trackedVehicles);
