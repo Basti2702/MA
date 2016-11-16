@@ -6,7 +6,7 @@
  */
 
 #include "ConvoyTracker.cuh"
-
+#include <assert.h>
 ConvoyTracker::ConvoyTracker() {
 	currentSpeed = 0;
 	currentYawRate = 0;
@@ -115,6 +115,30 @@ ConvoyTracker::ConvoyTracker() {
 	}
 
 	error = cudaHostGetDevicePointer(&d_duplicate_ptr, h_duplicate, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostAlloc((void**) &h_updateData, MAX_SEGMENTS*3*sizeof(double), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_updataData_ptr, h_updateData, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostAlloc((void**) &h_intvlIndex, MAX_SEGMENTS*sizeof(int), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_intvlIndex_ptr, h_intvlIndex, 0);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -407,12 +431,12 @@ __global__ void predict(PointCellDevice* d_interval)
 /*
  * Run Kalman-Filter Update on Device with 25 Threads
  */
-__global__ void updateDevice(PointCellDevice* d_interval, int index, double velocity, double phi, double xNew, double yNew, double thetaNew)
+__device__ void updateDevice(PointCellDevice* d_interval, int index, double velocity, double phi, double xNew, double yNew, double thetaNew)
 {
 	//row
-	int i = threadIdx.x / 5;
+	int i = index / 5;
 	//column
-	int j = threadIdx.x % 5;
+	int j = index % 5;
 
 	double tmp = 0;
 
@@ -498,8 +522,34 @@ __global__ void updateDevice(PointCellDevice* d_interval, int index, double velo
 	__syncthreads();
 	d_interval->writeP(i,j, d_interval->getTmp2(i,j));
 }
+__global__ void updateOne(PointCellDevice* d_interval, int index, double velocity, double phi, double xNew, double yNew, double thetaNew)
+{
+	updateDevice(d_interval,threadIdx.x,velocity, phi,xNew,yNew,thetaNew);
+}
+__global__ void updateKernel(PointCellDevice* d_intvl, double* d_updateData, int* d_intvlIndex)
+{
 
+	int index = d_intvlIndex[blockIdx.x];
+	double xNew = d_updateData[blockIdx.x*3];
+	double yNew = d_updateData[blockIdx.x*3+1];
+	double thetaNew = d_updateData[blockIdx.x*3+2];
+/*	if(threadIdx.x == 0)
+	{
+		printf("Update ID %d with x %f y %f theta %f, updateValues x %f y %f theta %f\n", d_intvl[index].getID(),d_intvl[index].getX(),d_intvl[index].getY(),d_intvl[index].getTheta(),xNew, yNew,thetaNew);
 
+	}*/
+	double x = d_intvl[index].data[5];
+	double y = d_intvl[index].data[6];
+	double theta = d_intvl[index].data[7];
+	double velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
+	double phi = (thetaNew-theta) / TIMESTAMP;
+	if(threadIdx.x == 0)
+	{
+		d_intvl[index].setVelocity(velocity);
+		d_intvl[index].setPhi(phi);
+	}
+	updateDevice(&(d_intvl[index]),threadIdx.x,velocity, phi,xNew,yNew,thetaNew);
+}
 __global__ void findIDInConvoyDevice(Convoy* d_convoy, int* d_IDIncluded, int id1, int id2)
 {
 	if(((threadIdx.x < d_convoy[blockIdx.x].endIndexID)  && (d_convoy[blockIdx.x].endIndexID > d_convoy[blockIdx.x].startIndexID)) || ((d_convoy[blockIdx.x].endIndexID < d_convoy[blockIdx.x].startIndexID) && (threadIdx.x != d_convoy[blockIdx.x].endIndexID)))
@@ -684,13 +734,16 @@ int main()
 				trackedVehicles.push_back(&(tracker.h_intervalMap[j]));
 			}*/
 
-			*tracker.h_historyMatchSelf = INT_MAX;
-			findConvoyDeviceSelf<<<tracker.historySize, MAX_LENGTH_HIST_CONV>>>(tracker.d_history_ptr, tracker.d_historyMatchSelf_ptr);
-
-			cudaDeviceSynchronize();
-			if(*tracker.h_historyMatchSelf != INT_MAX)
+			if(tracker.historySize > 0)
 			{
-				tracker.findConvoySelf(*tracker.h_historyMatchSelf);
+				*tracker.h_historyMatchSelf = INT_MAX;
+				findConvoyDeviceSelf<<<tracker.historySize, MAX_LENGTH_HIST_CONV>>>(tracker.d_history_ptr, tracker.d_historyMatchSelf_ptr);
+
+				cudaDeviceSynchronize();
+				if(*tracker.h_historyMatchSelf != INT_MAX)
+				{
+					tracker.findConvoySelf(*tracker.h_historyMatchSelf);
+				}
 			}
 		/*if(tracker.intervalSize >0)
 		{
@@ -888,14 +941,13 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 	//initialize all IDs in possible history to -1 to have no false detection in findConvoy
 	memSetHistoryMatch<<<1,MAX_SEGMENTS>>>(d_historyMatch_ptr);
 	convoyCheckSize = 0;
+	int updateCounter = 0;
+	int indexCounter = trackedVehicles.size();
 	std::vector<int> indicesToAdd;
 	std::vector<PointCellDevice*> updateCheck;
-	std::vector<int> updateList;
-	int indices[trackedVehicles.size()];
-	for(int i=0; i< trackedVehicles.size(); i++)
-	{
-		indices[i] = i;
-	}
+//	std::vector<int> updateList;
+//	int indices[trackedVehicles.size()];
+
 	for(uint i = 0; i<vehicles.size(); i++)
 	{
 		double x = vehicles.at(i).getX();
@@ -964,7 +1016,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 			PointCellDevice* tmp = trackedVehicles.at(trackedVehicles.size() -1 );
 			PointCellDevice* update = trackedVehicles.at(minIndex);
-			double velocity, phi;
+		/*	double velocity, phi;
 			double xNew = vehicles.at(i).data[0];
 			double yNew = vehicles.at(i).data[1];
 			double thetaNew = vehicles.at(i).data[2];
@@ -977,21 +1029,21 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 
 			update->setVelocity(velocity);
 			update->setPhi(phi);
-			updateDevice<<<1,25>>>(&(d_intervalMap_ptr[indices[minIndex]]), minIndex,velocity, phi, xNew, yNew, thetaNew);
-			cudaDeviceSynchronize();
-		//	update->update(vehicles.at(i).data);
+			updateOne<<<1,25>>>(&(d_intervalMap_ptr[h_intvlIndex[minIndex]]),1, velocity, phi, xNew, yNew, thetaNew);
+			cudaDeviceSynchronize();*/
+	//		update->update(vehicles.at(i).data);
 	//		std::cout << "X " << update->getX() << " Y " << update->getY() << " Theta " << update->getTheta() << " Vel: " << update->getVelocity() << " phi " << update->getPhi() << std::endl;
-			int intvl = floor(update->getX());
-			update->setX(intvl+ 0.5);
+	//		int intvl = floor(update->getX());
+	//		update->setX(intvl+ 0.5);
 
 #ifdef PRINT
 			std::cout << "Update ID " << update->getID() << std::endl;
 #endif
-			int historyIndex = findHistoryWithID(update->getID());
+	//		int historyIndex = findHistoryWithID(update->getID());
 #ifdef PRINT
 			std::cout << "HistoryIndex " << historyIndex << std::endl;
 #endif
-			if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
+	/*		if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
 			{
 				int index = history[historyIndex].endIndex;
 				history[historyIndex].tracks[index].subIntvl = 0.5;
@@ -1005,19 +1057,86 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 					history[historyIndex].startIndex = (history[historyIndex].startIndex+1)%NUM_HIST;
 				}
 				currentHistoryOnDevice = false;
-			}
+			}*/
 			trackedVehicles.at(minIndex) = tmp;
-			indices[minIndex] = indices[trackedVehicles.size()-1];
-			indices[trackedVehicles.size()-1] = minIndex;
+			h_intvlIndex[minIndex] = h_intvlIndex[trackedVehicles.size()-1];
+			h_intvlIndex[trackedVehicles.size()-1] = minIndex;
+			h_updateData[updateCounter*3] = vehicles.at(i).getX();
+			h_updateData[updateCounter*3+1] = vehicles.at(i).getY();
+			h_updateData[updateCounter*3+2] = vehicles.at(i).getTheta();
 			trackedVehicles.pop_back();
 #ifdef PRINT
 			std::cout << "Updated vehicle with ID " << update->getID() << std::endl;
 #endif
-//			updateCheck.push_back(update);
-//			updateList.push_back(i);
-			h_convoyCheck[convoyCheckSize] = *update;
-			++convoyCheckSize;
+			updateCheck.push_back(update);
+//		printf("update ID %d with x %f y %f theta %f\n", update->getID(),vehicles.at(i).getX(),vehicles.at(i).getY(),vehicles.at(i).getTheta());
 
+//			updateList.push_back(i);
+			++updateCounter;
+		/*	h_convoyCheck[convoyCheckSize] = *update;
+			++convoyCheckSize;*/
+		}
+	}
+	int testCounter = 0;
+	for(int i=0; i<updateCounter; i++)
+	{
+		for(int j=0; j<intervalSize; j++)
+		{
+			if(updateCheck[i] == &h_intervalMap[j])
+			{
+				h_intvlIndex[i] = j;
+//	printf("After update ID %d with x %f y %f theta %f with values x %f y %f theta %f\n", h_intervalMap[h_intvlIndex[i]].getID(),h_intervalMap[h_intvlIndex[i]].getX(),h_intervalMap[h_intvlIndex[i]].getY(),h_intervalMap[h_intvlIndex[i]].getTheta(), h_updateData[i*3],h_updateData[i*3+1],h_updateData[i*3+2]);
+		++testCounter;
+				break;
+			}
+		}
+	}
+//	std::cout << "Testcounter " << testCounter << " updateCounter" << updateCounter << std::endl;
+//	if(testCounter != updateCounter)
+	assert(testCounter == updateCounter);
+	if(updateCounter >0)
+	{
+		updateKernel<<<updateCounter,25>>>(d_intervalMap_ptr, d_updataData_ptr, d_intvlIndex_ptr);
+		cudaDeviceSynchronize();
+		for(int i=0; i<updateCounter;i++)
+		{
+			int intvl = floor(h_intervalMap[h_intvlIndex[i]].getX());
+	//		printf("Intervall ID %d after update: %d\n",h_intervalMap[h_intvlIndex[i]].getID(), intvl);
+			h_intervalMap[h_intvlIndex[i]].setX(intvl+ 0.5);
+			int historyIndex = findHistoryWithID(h_intervalMap[h_intvlIndex[i]].getID());
+	//		printf("historyIndex: %d\n", historyIndex);
+			if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
+			{
+				int index = history[historyIndex].endIndex;
+				history[historyIndex].tracks[index].subIntvl = 0.5;
+				history[historyIndex].tracks[index].x = h_intervalMap[h_intvlIndex[i]].getX();
+				history[historyIndex].tracks[index].y = h_intervalMap[h_intvlIndex[i]].getY();
+				history[historyIndex].tracks[index].theta = h_intervalMap[h_intvlIndex[i]].getTheta();
+				index = (index+1)%MAX_LENGTH_HIST_CONV;
+				history[historyIndex].endIndex = index;
+				if(index == history[historyIndex].startIndex)
+				{
+					history[historyIndex].startIndex = (history[historyIndex].startIndex+1)%NUM_HIST;
+				}
+		//		printf("Added Position: x %f y %f theta %f\n",h_intervalMap[h_intvlIndex[i]].getX(),h_intervalMap[h_intvlIndex[i]].getY(),h_intervalMap[h_intvlIndex[i]].getTheta() );
+				currentHistoryOnDevice = false;
+			}
+			h_convoyCheck[convoyCheckSize] = h_intervalMap[h_intvlIndex[i]];
+			++convoyCheckSize;
+		}
+	}
+
+	for(uint k = 0; k < trackedVehicles.size(); k++)
+	{
+		PointCellDevice* tmp = trackedVehicles.at(k);
+		//delete all tracks that could not be matched
+		for(uint m = 0; m < intervalSize; m++)
+		{
+			if(tmp == &h_intervalMap[m])
+			{
+				h_intervalMap[m] = h_intervalMap[--intervalSize];
+				break;
+			}
 		}
 	}
 /*	for(int i=0; i<updateList.size(); i++)
@@ -1061,19 +1180,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 		++convoyCheckSize;
 	}*/
 
-	for(uint k = 0; k < trackedVehicles.size(); k++)
-	{
-		PointCellDevice* tmp = trackedVehicles.at(k);
-		//delete all tracks that could not be matched
-		for(uint m = 0; m < intervalSize; m++)
-		{
-			if(tmp == &h_intervalMap[m])
-			{
-				h_intervalMap[m] = h_intervalMap[--intervalSize];
-				break;
-			}
-		}
-	}
 
 	for(uint k = 0; k < indicesToAdd.size(); k++)
 	{

@@ -52,6 +52,10 @@ public:
 	int* d_IDincluded_ptr;
 	bool* h_duplicate;
 	bool* d_duplicate_ptr;
+	double* h_updateData;
+	double* d_updataData_ptr;
+	int* h_intvlIndex;
+	int* d_intvlIndex_ptr;
 
 	History* history;
 	int startIndexHistory;
