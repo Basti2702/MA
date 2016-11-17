@@ -96,7 +96,7 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &h_IDincluded, NUM_CONV*2*sizeof(int), cudaHostAllocMapped);
+	error = cudaHostAlloc((void**) &h_IDincluded, NUM_HIST*2*sizeof(int), cudaHostAllocMapped);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -108,7 +108,7 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &h_duplicate, NUM_CONV*sizeof(bool), cudaHostAllocMapped);
+	error = cudaHostAlloc((void**) &h_duplicate, NUM_HIST*sizeof(bool), cudaHostAllocMapped);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -583,7 +583,53 @@ __global__ void checkConvoyForDuplicateDevice(Convoy* d_convoy, PointCellDevice*
 		}
 	}
 }
+__global__ void checkHistoryForDuplicateDevice(History* d_history, PointCellDevice* d_intvl, int* d_intvlIndex, int* d_IDincluded, bool* d_duplicate)
+{
+	if(((threadIdx.x < d_history[d_IDincluded[blockIdx.x]].endIndex)  && (d_history[d_IDincluded[blockIdx.x]].endIndex > d_history[d_IDincluded[blockIdx.x]].startIndex)) || ((d_history[d_IDincluded[blockIdx.x]].endIndex < d_history[d_IDincluded[blockIdx.x]].startIndex) && (threadIdx.x != d_history[d_IDincluded[blockIdx.x]].endIndex)))
+	{
+		d_duplicate[blockIdx.x] = true;
+		int index = d_intvlIndex[blockIdx.x];
+		int intvl = floor(d_intvl[index].getX());
+		intvl += 0.5;
+		if(d_history[d_IDincluded[blockIdx.x]].tracks[threadIdx.x].x == intvl)
+		{
+			d_duplicate[blockIdx.x] = false;
+		}
+	}
+}
+__global__ void findHistoryWithIDDevice(History* d_history, PointCellDevice* d_intvl, int* d_intvlIndex, int* d_IDincluded)
+{
+	int index = d_intvlIndex[threadIdx.x];
+	int ID = d_intvl[index].getID();
+	if(d_history[blockIdx.x].ID == ID)
+	{
+		d_IDincluded[threadIdx.x] = blockIdx.x;
+	}
+}
 
+__global__ void addUpdatedPositionToHistoryDevice(History* d_history, PointCellDevice* d_intvl, int* d_intvlIndex, int* d_IDincluded, bool* d_duplicate)
+{
+	int intvl = floor(d_intvl[d_intvlIndex[threadIdx.x]].getX());
+//		printf("Intervall ID %d after update: %d\n",h_intervalMap[h_intvlIndex[i]].getID(), intvl);
+	d_intvl[d_intvlIndex[threadIdx.x]].setX(intvl+ 0.5);
+//		int historyIndex = findHistoryWithID(h_intervalMap[h_intvlIndex[i]].getID());
+	int historyIndex = d_IDincluded[threadIdx.x];
+//		printf("historyIndex: %d\n", historyIndex);
+	if(d_duplicate[threadIdx.x]/*checkHistoryForDuplicate(intvl + 0.5, historyIndex)*/)
+	{
+		int index = d_history[historyIndex].endIndex;
+		d_history[historyIndex].tracks[index].subIntvl = 0.5;
+		d_history[historyIndex].tracks[index].x = d_intvl[d_intvlIndex[threadIdx.x]].getX();
+		d_history[historyIndex].tracks[index].y = d_intvl[d_intvlIndex[threadIdx.x]].getY();
+		d_history[historyIndex].tracks[index].theta = d_intvl[d_intvlIndex[threadIdx.x]].getTheta();
+		index = (index+1)%MAX_LENGTH_HIST_CONV;
+		d_history[historyIndex].endIndex = index;
+		if(index == d_history[historyIndex].startIndex)
+		{
+			d_history[historyIndex].startIndex = (d_history[historyIndex].startIndex+1)%NUM_HIST;
+		}
+	}
+}
 int main()
 {
 #ifdef CREATE_MEASURES
@@ -1077,7 +1123,6 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			++convoyCheckSize;*/
 		}
 	}
-	int testCounter = 0;
 	for(int i=0; i<updateCounter; i++)
 	{
 		for(int j=0; j<intervalSize; j++)
@@ -1086,26 +1131,27 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			{
 				h_intvlIndex[i] = j;
 //	printf("After update ID %d with x %f y %f theta %f with values x %f y %f theta %f\n", h_intervalMap[h_intvlIndex[i]].getID(),h_intervalMap[h_intvlIndex[i]].getX(),h_intervalMap[h_intvlIndex[i]].getY(),h_intervalMap[h_intvlIndex[i]].getTheta(), h_updateData[i*3],h_updateData[i*3+1],h_updateData[i*3+2]);
-		++testCounter;
 				break;
 			}
 		}
 	}
-//	std::cout << "Testcounter " << testCounter << " updateCounter" << updateCounter << std::endl;
-//	if(testCounter != updateCounter)
-	assert(testCounter == updateCounter);
+	//Update all matched vehicles
 	if(updateCounter >0)
 	{
 		updateKernel<<<updateCounter,25>>>(d_intervalMap_ptr, d_updataData_ptr, d_intvlIndex_ptr);
+		findHistoryWithIDDevice<<<historySize,updateCounter>>>(d_history_ptr,d_intervalMap_ptr,d_intvlIndex_ptr,d_IDincluded_ptr);
+		checkHistoryForDuplicateDevice<<<updateCounter, MAX_LENGTH_HIST_CONV>>>(d_history_ptr,d_intervalMap_ptr,d_intvlIndex_ptr,d_IDincluded_ptr,d_duplicate_ptr);
+		addUpdatedPositionToHistoryDevice<<<1,updateCounter>>>(d_history_ptr, d_intervalMap_ptr,d_intvlIndex_ptr, d_IDincluded_ptr,d_duplicate_ptr);
 		cudaDeviceSynchronize();
 		for(int i=0; i<updateCounter;i++)
 		{
-			int intvl = floor(h_intervalMap[h_intvlIndex[i]].getX());
+/*			int intvl = floor(h_intervalMap[h_intvlIndex[i]].getX());
 	//		printf("Intervall ID %d after update: %d\n",h_intervalMap[h_intvlIndex[i]].getID(), intvl);
 			h_intervalMap[h_intvlIndex[i]].setX(intvl+ 0.5);
-			int historyIndex = findHistoryWithID(h_intervalMap[h_intvlIndex[i]].getID());
+	//		int historyIndex = findHistoryWithID(h_intervalMap[h_intvlIndex[i]].getID());
+			int historyIndex = h_IDincluded[i];
 	//		printf("historyIndex: %d\n", historyIndex);
-			if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
+			if(h_duplicate[i]/*checkHistoryForDuplicate(intvl + 0.5, historyIndex)*)
 			{
 				int index = history[historyIndex].endIndex;
 				history[historyIndex].tracks[index].subIntvl = 0.5;
@@ -1120,16 +1166,16 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 				}
 		//		printf("Added Position: x %f y %f theta %f\n",h_intervalMap[h_intvlIndex[i]].getX(),h_intervalMap[h_intvlIndex[i]].getY(),h_intervalMap[h_intvlIndex[i]].getTheta() );
 				currentHistoryOnDevice = false;
-			}
+			}*/
 			h_convoyCheck[convoyCheckSize] = h_intervalMap[h_intvlIndex[i]];
 			++convoyCheckSize;
 		}
 	}
 
+	//delete all tracks that could not be matched
 	for(uint k = 0; k < trackedVehicles.size(); k++)
 	{
 		PointCellDevice* tmp = trackedVehicles.at(k);
-		//delete all tracks that could not be matched
 		for(uint m = 0; m < intervalSize; m++)
 		{
 			if(tmp == &h_intervalMap[m])
@@ -1139,48 +1185,8 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 			}
 		}
 	}
-/*	for(int i=0; i<updateList.size(); i++)
-	{
-		PointCellDevice* update = updateCheck.at(i);
-		/*	double velocity, phi;
-			double xNew = vehicles.at(i).data[0];
-			double yNew = vehicles.at(i).data[1];
-			double thetaNew = vehicles.at(i).data[2];
 
-			double xU = update->data[5];
-			double yU = update->data[6];
-			double thetaU = update->data[7];
-			velocity = sqrt((xNew - xU) * (xNew - xU) + (yNew - yU)*(yNew - yU)) / TIMESTAMP;
-			phi = (thetaNew-thetaU) / TIMESTAMP;
-
-			update->setVelocity(velocity);
-			update->setPhi(phi);
-			updateDevice<<<1,25>>>(&(d_intervalMap_ptr[minIndex]), minIndex,velocity, phi, xNew, yNew, thetaNew);
-			cudaDeviceSynchronize();*
-		update->update(vehicles.at(updateList.at(i)).data);
-		int intvl = floor(update->getX());
-		update->setX(intvl + 0.5);
-		int historyIndex = findHistoryWithID(update->getID());
-		if(checkHistoryForDuplicate(intvl + 0.5, historyIndex))
-		{
-			int index = history[historyIndex].endIndex;
-			history[historyIndex].tracks[index].subIntvl = 0.5;
-			history[historyIndex].tracks[index].x = update->getX();
-			history[historyIndex].tracks[index].y = update->getY();
-			history[historyIndex].tracks[index].theta = update->getTheta();
-			index = (index+1)%MAX_LENGTH_HIST_CONV;
-			history[historyIndex].endIndex = index;
-			if(index == history[historyIndex].startIndex)
-			{
-				history[historyIndex].startIndex = (history[historyIndex].startIndex+1)%NUM_HIST;
-			}
-			currentHistoryOnDevice = false;
-		}
-		h_convoyCheck[convoyCheckSize] = *update;
-		++convoyCheckSize;
-	}*/
-
-
+	//add all observations that could not be matched
 	for(uint k = 0; k < indicesToAdd.size(); k++)
 	{
 		if(intervalSize < MAX_SEGMENTS)
@@ -1189,6 +1195,7 @@ void ConvoyTracker::associateAndUpdate(std::vector<PointCellDevice> vehicles, st
 		}
 	}
 
+	//find Convoy
 	if(historySize > 0 && convoyCheckSize >0)
 	{
 		dim3 grid(historySize, convoyCheckSize);
