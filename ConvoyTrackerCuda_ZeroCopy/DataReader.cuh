@@ -29,7 +29,7 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
-	std::vector<PointCellDevice> processLaserData(std::string number, double currentSpeed, double currentYawRate);
+	int processLaserData(std::string number, double currentSpeed, double currentYawRate, PointCellDevice* h_vehicles);
 
 private:
 	DataVisualizer visualizer;
@@ -61,7 +61,7 @@ private:
 	int getLaserData(laserdata_raw_array data, std::string number);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
-	std::vector<PointCellDevice> computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number);
+	int computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number, PointCellDevice* h_vehicles);
 	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
 	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };

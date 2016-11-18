@@ -462,7 +462,7 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
  * Runs over all laser points and tries to group them to segments, regarding to their euclidean distance to their neighbor point
  * going from left to right
  */
-std::vector<PointCellDevice> DataReader::processLaserData(std::string number, double currentSpeed, double currentYawRate)
+int DataReader::processLaserData(std::string number, double currentSpeed, double currentYawRate, PointCellDevice* h_vehicles)
 {
 	this->currentSpeed = currentSpeed;
 	this->currentYawRate = currentYawRate;
@@ -472,7 +472,7 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	if(numElements < 3)
 	{
 		std::vector<PointCellDevice> vehicles;
-		return vehicles;
+		return 0;
 	}
 	processDist<<<1,numElements-1,0,stream1>>>(d_data_ptr, d_dist_ptr);
 	processThresh<<<1, numElements-1,0, stream0>>>(d_data_ptr,d_thresh_ptr);
@@ -536,7 +536,7 @@ std::vector<PointCellDevice> DataReader::processLaserData(std::string number, do
 	visualizer.visualizeSegmentsAsPointCloud(car_segments, number, segment_counter);
 #endif
 	cudaStreamSynchronize(stream0);
-	std::vector<PointCellDevice> vehicles = computeVehicleState(car_segments, segment_counter, number);
+	int vehicles = computeVehicleState(car_segments, segment_counter, number, h_vehicles);
 	return vehicles;
 }
 
@@ -574,10 +574,10 @@ double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
 
 }
 
-std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number)
+int DataReader::computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number, PointCellDevice* h_vehicles)
 {
 	std::vector<PointCellDevice> vehicles;
-
+	int counter = 0;
 	laserdata_cartesian* relevantPoints;
 	std::vector<std::vector<laserdata_cartesian> > toPlot;
 
@@ -632,11 +632,14 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 		}
 		if(theta > 60 && width > 1)
 		{
-			PointCellDevice vehicle;
+		//	PointCellDevice vehicle;
 			//vehicle.width = width;
 			double y = relevantPoints[left].y + width/2;
-			vehicle.setX(relevantPoints[left].x + length/2);//x
-			vehicle.setY(relevantPoints[left].y + width/2); // y
+			h_vehicles[counter].initializeMemory();
+		//	vehicle.setX(relevantPoints[left].x + length/2);//x
+		//	vehicle.setY(relevantPoints[left].y + width/2); // y
+			h_vehicles[counter].setX(relevantPoints[left].x + length/2);//x
+			h_vehicles[counter].setY(relevantPoints[left].y + width/2); // y
 			//now compute theta regarding to movement direction
 			switch(points)
 			{
@@ -654,31 +657,40 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 				break;
 			}
 			theta = atan(width/length);
-			vehicle.setTheta(theta*M_PI / 180.0); //theta
+			//vehicle.setTheta(theta*M_PI / 180.0); //theta
+			h_vehicles[counter].setTheta(theta*M_PI / 180.0); //theta
 			//due to prior knowledge on highways, velocitys for diffrent lanes are estimated as below
 			if(y < -4.5)
 			{
-				vehicle.setVelocity(currentSpeed + 11.11); //velocity + 40kmh
+				//vehicle.setVelocity(currentSpeed + 11.11); //velocity + 40kmh
+				h_vehicles[counter].setVelocity(currentSpeed + 11.11); //velocity + 40kmh
 			}
 			else if(y < -1.5)
 			{
-				vehicle.setVelocity(currentSpeed + 5.55); //velocity + 20kmh
+				//vehicle.setVelocity(currentSpeed + 5.55); //velocity + 20kmh
+				h_vehicles[counter].setVelocity(currentSpeed + 5.55); //velocity + 20kmh
 			}
 			else if(y > 4.5)
 			{
-				vehicle.setVelocity(currentSpeed - 11.11); //velocity - 40kmh
+				//vehicle.setVelocity(currentSpeed - 11.11); //velocity - 40kmh
+				h_vehicles[counter].setVelocity(currentSpeed - 11.11); //velocity - 40kmh
 			}
 			else if(y > 1.5)
 			{
-				vehicle.setVelocity(currentSpeed - 5.55); //velocity - 20kmh
+				//vehicle.setVelocity(currentSpeed - 5.55); //velocity - 20kmh
+				h_vehicles[counter].setVelocity(currentSpeed - 5.55); //velocity - 20kmh
 			}
 			else
 			{
-				vehicle.setVelocity(currentSpeed); //velocity
+				//vehicle.setVelocity(currentSpeed); //velocity
+				h_vehicles[counter].setVelocity(currentSpeed); //velocity
 			}
-			vehicle.setPhi(currentYawRate); //yaw rate
-			vehicle.subInvtl = 0.5;
-			vehicles.push_back(vehicle);
+		//	vehicle.setPhi(currentYawRate); //yaw rate
+		//	vehicle.subInvtl = 0.5;
+			h_vehicles[counter].setPhi(currentYawRate); //yaw rate
+			h_vehicles[counter].subInvtl = 0.5;
+			//vehicles.push_back(vehicle);
+			++counter;
 			std::vector<laserdata_cartesian> tmp;
 			tmp.push_back(relevantPoints[0]);
 			tmp.push_back(relevantPoints[1]);
@@ -692,7 +704,7 @@ std::vector<PointCellDevice> DataReader::computeVehicleState(cartesian_segment* 
 #ifdef VISUALIZE
 	visualizer.visualizeVehiclesAsRectangle(toPlot, number);
 #endif
-	return vehicles;
+	return counter;
 }
 
 /**

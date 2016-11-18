@@ -38,7 +38,7 @@
  *
  * Szenario 6: Same as Scenario 5, but with 20 simulated cars
  */
-#define SZENARIO 5
+#define SZENARIO 1
 
 #if SZENARIO == 1
 /*

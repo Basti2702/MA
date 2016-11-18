@@ -39,6 +39,8 @@ public:
 	History* d_history_ptr;
 	PointCellDevice* d_newVeh_ptr;
 	PointCellDevice* h_convoyCheck;
+	PointCellDevice* h_vehicles;
+	PointCellDevice* d_vehicles_ptr;
 	int convoyCheckSize;
 	int* d_historyMatch_ptr;
 	int* h_historyMatch;
@@ -67,10 +69,13 @@ public:
 	int endIndexConvoys;
 	int convoySize;
 
+	PointCellDevice* h_vehicleSim;
+	PointCellDevice* d_vehicleSim_ptr;
+
 	cudaStream_t stream2, stream3, stream4;
 
 	void readEMLData(std::string number);
-	void associateAndUpdate(std::vector<PointCellDevice> vehicles, std::vector<PointCellDevice*> trackedVehicles);
+	void associateAndUpdate(int vehicleCount, std::vector<PointCellDevice*> trackedVehicles);
 	void findConvoy(PointCellDevice vehicle);
 	void shiftConvoyHistory(double x);
 	void rotateConvoyHistory(double theta, double y);
