@@ -156,6 +156,18 @@ ConvoyTracker::ConvoyTracker() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
+	error = cudaHostAlloc((void**) &h_distance, MAX_SEGMENTS*MAX_SEGMENTS*sizeof(double), cudaHostAllocMapped);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
+	error = cudaHostGetDevicePointer(&d_distance_ptr, h_distance, 0);
+	if (error != cudaSuccess) {
+		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
+				cudaGetErrorString(error), error, __LINE__);
+	}
+
 	size_t sizeConv = NUM_CONV;
 	sizeConv *= sizeof(Convoy);
 	error = cudaHostAlloc((void **) &convoys, sizeConv, cudaHostAllocMapped);
@@ -197,6 +209,10 @@ ConvoyTracker::~ConvoyTracker() {
 	cudaFreeHost(h_intervalMap);
 	cudaFreeHost(h_historyMatchSelf);
 	cudaFreeHost(h_IDincluded);
+	cudaFreeHost(h_vehicles);
+	cudaFreeHost(h_distance);
+	cudaFreeHost(h_duplicate);
+	cudaFreeHost(h_intvlIndex);
 	cudaStreamDestroy(stream2);
 	cudaStreamDestroy(stream3);
 	cudaStreamDestroy(stream4);
@@ -642,6 +658,20 @@ __global__ void addUpdatedPositionToHistoryDevice(History* d_history, PointCellD
 		}
 	}
 }
+
+__global__ void computeDistancesDevice(PointCellDevice* d_vehicles, PointCellDevice* d_intvl, double* d_distance)
+{
+	int index = blockIdx.x*MAX_SEGMENTS + threadIdx.x;
+	double x = d_vehicles[blockIdx.x].getX();
+	double y = d_vehicles[blockIdx.x].getY();
+	double theta = d_vehicles[blockIdx.x].getTheta();
+	double x1 = d_intvl[threadIdx.x].getX();
+	double y1 = d_intvl[threadIdx.x].getY();
+	double theta1 = d_intvl[threadIdx.x].getTheta();
+
+	d_distance[index] = sqrt((x - x1)*(x - x1) + (y - y1)*(y - y1) + (theta - theta1)*(theta - theta1));
+}
+
 int main()
 {
 #ifdef CREATE_MEASURES
@@ -862,7 +892,9 @@ int main()
 #else
 	 std::cout << time + time2 << std::endl;
 #endif
-
+#if SZENARIO == 6
+	 cudaFreeHost(tracker.h_vehicleSim);
+#endif
 	tracker.visualizeConvoys();
 	tracker.visualizeHistory();
 	return 0;
@@ -1013,16 +1045,25 @@ void ConvoyTracker::setYOld(double old) {
 void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDevice*> trackedVehicles)
 {
 	//initialize all IDs in possible history to -1 to have no false detection in findConvoy
-	memSetHistoryMatch<<<1,MAX_SEGMENTS>>>(d_historyMatch_ptr);
+	memSetHistoryMatch<<<1,MAX_SEGMENTS,0,stream2>>>(d_historyMatch_ptr);
+#if SZENARIO == 6
+	computeDistancesDevice<<<vehicleCount,intervalSize,0,stream3>>>(d_vehicleSim_ptr,d_intervalMap_ptr,d_distance_ptr);
+#else
+	computeDistancesDevice<<<vehicleCount,intervalSize,0,stream3>>>(d_vehicles_ptr,d_intervalMap_ptr,d_distance_ptr);
+#endif
 	convoyCheckSize = 0;
 	int updateCounter = 0;
 	int indexCounter = trackedVehicles.size();
 	std::vector<int> indicesToAdd;
 	std::vector<PointCellDevice*> updateCheck;
-
+	for(int i=0; i<intervalSize; i++)
+	{
+		h_intvlIndex[i] = i;
+	}
+	cudaStreamSynchronize(stream3);
 	for(uint i = 0; i<vehicleCount; i++)
 	{
-#if SZENARIO == 6
+/*#if SZENARIO == 6
 		double x = h_vehicleSim[i].getX();
 		double y = h_vehicleSim[i].getY();
 		double theta = h_vehicleSim[i].getTheta();
@@ -1030,7 +1071,7 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 		double x = h_vehicles[i].getX();
 		double y = h_vehicles[i].getY();
 		double theta = h_vehicles[i].getTheta();
-#endif
+#endif*/
 		double minDist = INT_MAX;
 		int minIndex = INT_MAX;
 #ifdef PRINT
@@ -1038,14 +1079,15 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 #endif
 		for(uint j = 0; j<trackedVehicles.size(); j++)
 		{
-			double x1 = trackedVehicles.at(j)->getX();
+		/*	double x1 = trackedVehicles.at(j)->getX();
 			double y1 = trackedVehicles.at(j)->getY();
 			double theta1 = trackedVehicles.at(j)->getTheta();
 #ifdef PRINT
 			std::cout << "X1: " << x1 << " Y1: " << y1<< " Theta1: " << theta1 <<std::endl;
 #endif
 			double dist = sqrt((x - x1)*(x - x1) + (y - y1)*(y - y1) + (theta - theta1)*(theta - theta1));
-
+			*/
+			double dist = h_distance[i*MAX_SEGMENTS+j];
 			if(dist < minDist)
 			{
 				minDist = dist;
@@ -1115,6 +1157,10 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 			trackedVehicles.at(minIndex) = tmp;
 			h_intvlIndex[minIndex] = h_intvlIndex[trackedVehicles.size()-1];
 			h_intvlIndex[trackedVehicles.size()-1] = minIndex;
+			for(int k=0; k<vehicleCount;k++)
+			{
+				h_distance[k*MAX_SEGMENTS+minIndex] = h_distance[k*MAX_SEGMENTS+(trackedVehicles.size()-1)];
+			}
 #if SZENARIO == 6
 			h_updateData[updateCounter*3] = h_vehicleSim[i].getX();
 			h_updateData[updateCounter*3+1] = h_vehicleSim[i].getY();

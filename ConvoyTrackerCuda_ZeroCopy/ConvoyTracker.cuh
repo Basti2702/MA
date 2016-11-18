@@ -58,6 +58,8 @@ public:
 	double* d_updataData_ptr;
 	int* h_intvlIndex;
 	int* d_intvlIndex_ptr;
+	double* h_distance;
+	double* d_distance_ptr;
 
 	History* history;
 	int startIndexHistory;
