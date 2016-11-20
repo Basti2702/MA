@@ -639,6 +639,20 @@ __global__ void checkHistoryForDuplicateDevice(History* d_history, PointCellDevi
 		}
 	}
 }
+
+__global__ void checkConvoyForDuplicateDeviceSelf(Convoy* d_convoy, bool* d_duplicate)
+{
+	if(((threadIdx.x < d_convoy[blockIdx.x].endIndexTracks)  && (d_convoy[blockIdx.x].endIndexTracks > d_convoy[blockIdx.x].startIndexTracks)) || ((d_convoy[blockIdx.x].endIndexTracks < d_convoy[blockIdx.x].startIndexTracks) && (threadIdx.x != d_convoy[blockIdx.x].endIndexTracks)))
+	{
+		d_duplicate[blockIdx.x] = true;
+		bool result = (d_convoy[blockIdx.x].tracks[threadIdx.x].x != 0.5);
+		if(!result)
+		{
+			d_duplicate[blockIdx.x] = d_duplicate[blockIdx.x] && result;
+		}
+	}
+}
+
 __global__ void findHistoryWithIDDevice(History* d_history, PointCellDevice* d_intvl, int* d_intvlIndex, int* d_IDincluded)
 {
 	int index = d_intvlIndex[threadIdx.x];
@@ -1961,17 +1975,29 @@ void ConvoyTracker::findConvoySelf(int ID)
 	std::cout << "ID1 " << id1  << " ID2 " << id2 << std::endl;
 #endif
 	bool convoyFound = false;
+	if(convoySize >0)
+	{
+		cudaMemcpy(d_convoys, convoys, convoySize*sizeof(Convoy), cudaMemcpyHostToDevice);
+		cudaDeviceSynchronize();
+		findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream3>>>(d_convoys, d_IDincluded,id1,id2);
+		checkConvoyForDuplicateDeviceSelf<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream2>>>(d_convoys,d_duplicate);
+		cudaMemcpyAsync(h_IDincluded, d_IDincluded, convoySize*2*sizeof(int), cudaMemcpyDeviceToHost, stream3);
+		cudaMemcpyAsync(h_duplicate, d_duplicate, convoySize*sizeof(bool), cudaMemcpyDeviceToHost, stream2);
+		cudaDeviceSynchronize();
+	}
 	for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
 	{
-		int it1, it2;
+	//	int it1, it2;
 		Convoy currentConvoy = convoys[j];
-		it1 = findIDinConvoy(currentConvoy, id1);
-		it2 = findIDinConvoy(currentConvoy, id2);
+	//	it1 = findIDinConvoy(currentConvoy, id1);
+	//	it2 = findIDinConvoy(currentConvoy, id2);
+		int it1 = h_IDincluded[j*2];
+		int it2 = h_IDincluded[j*2+1];
 		if(it1 != INT_MAX && it2 != INT_MAX)
 		{
 			//convoy already exists with both IDS
 			//check if this x value is already contained
-			if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+			if(h_duplicate[j]/*checkConvoyForDuplicate(interval+0.5, currentConvoy)*/)
 			{
 				//x value is not contained
 				int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
@@ -2002,7 +2028,7 @@ void ConvoyTracker::findConvoySelf(int ID)
 		{
 			int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 			//check if this x value is already contained
-			if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+			if(h_duplicate[j]/*checkConvoyForDuplicate(interval+0.5, currentConvoy)*/)
 			{
 				convoys[j].tracks[currentConvoy.endIndexTracks].x = 0.5;
 				convoys[j].tracks[currentConvoy.endIndexTracks].y = 0;

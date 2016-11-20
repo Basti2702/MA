@@ -611,6 +611,19 @@ __global__ void checkConvoyForDuplicateDevice(Convoy* d_convoy, PointCellDevice*
 		}
 	}
 }
+
+__global__ void checkConvoyForDuplicateDeviceSelf(Convoy* d_convoy, bool* d_duplicate)
+{
+	if(((threadIdx.x < d_convoy[blockIdx.x].endIndexTracks)  && (d_convoy[blockIdx.x].endIndexTracks > d_convoy[blockIdx.x].startIndexTracks)) || ((d_convoy[blockIdx.x].endIndexTracks < d_convoy[blockIdx.x].startIndexTracks) && (threadIdx.x != d_convoy[blockIdx.x].endIndexTracks)))
+	{
+		d_duplicate[blockIdx.x] = true;
+		bool result = (d_convoy[blockIdx.x].tracks[threadIdx.x].x != 0.5);
+		if(!result)
+		{
+			d_duplicate[blockIdx.x] = d_duplicate[blockIdx.x] && result;
+		}
+	}
+}
 __global__ void checkHistoryForDuplicateDevice(History* d_history, PointCellDevice* d_intvl, int* d_intvlIndex, int* d_IDincluded, bool* d_duplicate)
 {
 	if(((threadIdx.x < d_history[d_IDincluded[blockIdx.x]].endIndex)  && (d_history[d_IDincluded[blockIdx.x]].endIndex > d_history[d_IDincluded[blockIdx.x]].startIndex)) || ((d_history[d_IDincluded[blockIdx.x]].endIndex < d_history[d_IDincluded[blockIdx.x]].startIndex) && (threadIdx.x != d_history[d_IDincluded[blockIdx.x]].endIndex)))
@@ -800,24 +813,24 @@ int main()
 			if(tracker.convoySize > 0)
 			{
 				compensateEgoMotionConvoy<<<tracker.convoySize, MAX_LENGTH_HIST_CONV,0, tracker.stream2>>>(tracker.d_convoys_ptr, deltaX, deltaY, deltaYaw);
-				for(uint i = 0; i < tracker.convoySize; i++)
+				for(uint k = 0; k < tracker.convoySize; k++)
 				{
-					tracker.convoys[i].highestValue.subIntvl += deltaX;
-					int numIntervals = (int) ((tracker.convoys[i].highestValue.subIntvl) / INTERVALL_LENGTH);
-					tracker.convoys[i].highestValue.x -= numIntervals;
-					tracker.convoys[i].highestValue.subIntvl -= numIntervals;
+					tracker.convoys[k].highestValue.subIntvl += deltaX;
+					int numIntervals = (int) ((tracker.convoys[k].highestValue.subIntvl) / INTERVALL_LENGTH);
+					tracker.convoys[k].highestValue.x -= numIntervals;
+					tracker.convoys[k].highestValue.subIntvl -= numIntervals;
 
-					tracker.convoys[i].highestValue.y -= deltaY;
-					tracker.convoys[i].highestValue.theta -= angleInRadians;
+					tracker.convoys[k].highestValue.y -= deltaY;
+					tracker.convoys[k].highestValue.theta -= angleInRadians;
 
-					double xAbs = tracker.convoys[i].highestValue.x;
-					double yAbs = tracker.convoys[i].highestValue.y;
+					double xAbs = tracker.convoys[k].highestValue.x;
+					double yAbs = tracker.convoys[k].highestValue.y;
 
 					xAbs = (mat[0][0] * xAbs + mat[0][1] * yAbs) - xAbs;
 					yAbs = (mat[1][0] * xAbs + mat[1][1] * yAbs) - yAbs;
 
-					tracker.convoys[i].highestValue.y -= yAbs;
-					tracker.convoys[i].highestValue.subIntvl -= xAbs;
+					tracker.convoys[k].highestValue.y -= yAbs;
+					tracker.convoys[k].highestValue.subIntvl -= xAbs;
 				}
 			}
 			if(tracker.intervalSize > 0)
@@ -888,7 +901,7 @@ int main()
 	 float time2;
 	 cudaEventElapsedTime(&time2, startEvent, stopEvent);
 #ifdef PRINT
-	 std::cout << "Overall Time: " << time << std::endl;
+	 std::cout << "Overall Time: " << time +time2<< std::endl;
 #else
 	 std::cout << time + time2 << std::endl;
 #endif
@@ -1046,24 +1059,24 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 {
 	//initialize all IDs in possible history to -1 to have no false detection in findConvoy
 	memSetHistoryMatch<<<1,MAX_SEGMENTS,0,stream2>>>(d_historyMatch_ptr);
-#if SZENARIO == 6
+/*#if SZENARIO == 6
 	computeDistancesDevice<<<vehicleCount,intervalSize,0,stream3>>>(d_vehicleSim_ptr,d_intervalMap_ptr,d_distance_ptr);
 #else
 	computeDistancesDevice<<<vehicleCount,intervalSize,0,stream3>>>(d_vehicles_ptr,d_intervalMap_ptr,d_distance_ptr);
-#endif
+#endif*/
 	convoyCheckSize = 0;
 	int updateCounter = 0;
 	int indexCounter = trackedVehicles.size();
 	std::vector<int> indicesToAdd;
 	std::vector<PointCellDevice*> updateCheck;
-	for(int i=0; i<intervalSize; i++)
+/*	for(int i=0; i<intervalSize; i++)
 	{
 		h_intvlIndex[i] = i;
 	}
-	cudaStreamSynchronize(stream3);
+	cudaStreamSynchronize(stream3); */
 	for(uint i = 0; i<vehicleCount; i++)
 	{
-/*#if SZENARIO == 6
+#if SZENARIO == 6
 		double x = h_vehicleSim[i].getX();
 		double y = h_vehicleSim[i].getY();
 		double theta = h_vehicleSim[i].getTheta();
@@ -1071,7 +1084,7 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 		double x = h_vehicles[i].getX();
 		double y = h_vehicles[i].getY();
 		double theta = h_vehicles[i].getTheta();
-#endif*/
+#endif
 		double minDist = INT_MAX;
 		int minIndex = INT_MAX;
 #ifdef PRINT
@@ -1079,15 +1092,15 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 #endif
 		for(uint j = 0; j<trackedVehicles.size(); j++)
 		{
-		/*	double x1 = trackedVehicles.at(j)->getX();
+			double x1 = trackedVehicles.at(j)->getX();
 			double y1 = trackedVehicles.at(j)->getY();
 			double theta1 = trackedVehicles.at(j)->getTheta();
 #ifdef PRINT
 			std::cout << "X1: " << x1 << " Y1: " << y1<< " Theta1: " << theta1 <<std::endl;
 #endif
 			double dist = sqrt((x - x1)*(x - x1) + (y - y1)*(y - y1) + (theta - theta1)*(theta - theta1));
-			*/
-			double dist = h_distance[i*MAX_SEGMENTS+j];
+
+		//	double dist = h_distance[i*MAX_SEGMENTS+j];
 			if(dist < minDist)
 			{
 				minDist = dist;
@@ -1157,10 +1170,10 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 			trackedVehicles.at(minIndex) = tmp;
 			h_intvlIndex[minIndex] = h_intvlIndex[trackedVehicles.size()-1];
 			h_intvlIndex[trackedVehicles.size()-1] = minIndex;
-			for(int k=0; k<vehicleCount;k++)
+		/*	for(int k=0; k<vehicleCount;k++)
 			{
 				h_distance[k*MAX_SEGMENTS+minIndex] = h_distance[k*MAX_SEGMENTS+(trackedVehicles.size()-1)];
-			}
+			}*/
 #if SZENARIO == 6
 			h_updateData[updateCounter*3] = h_vehicleSim[i].getX();
 			h_updateData[updateCounter*3+1] = h_vehicleSim[i].getY();
@@ -1263,8 +1276,8 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 					Convoy currentConvoy = convoys[j];
 			//		it1 = findIDinConvoy(currentConvoy, id1);
 			//		it2 = findIDinConvoy(currentConvoy, id2);
-					int it1 = d_IDincluded_ptr[j*2];
-					int it2 = d_IDincluded_ptr[j*2+1];
+					int it1 = h_IDincluded[j*2];
+					int it2 = h_IDincluded[j*2+1];
 				/*	if(it1 != it11 || it2 != it21)
 					{
 						std::cout << "Included CPU 1: " << it1 << " CPU2: " << it2 << " GPU1: " << it11 << " GPU2: " << it21 << std::endl;
@@ -1296,7 +1309,7 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << " startIndexTracks: " << convoys[j].startIndexTracks <<" EndindexTracks: "<< convoys[j].endIndexTracks<< std::endl;
 #endif
 						break;
 					}
@@ -1311,8 +1324,8 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 					Convoy currentConvoy = convoys[j];
 		//			it1 = findIDinConvoy(currentConvoy, id1);
 		//			it2 = findIDinConvoy(currentConvoy, id2);
-					int it1 = d_IDincluded_ptr[j*2];
-					int it2 = d_IDincluded_ptr[j*2+1];
+					int it1 = h_IDincluded[j*2];
+					int it2 = h_IDincluded[j*2+1];
 					if (it1 != INT_MAX)
 					{
 						int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
@@ -1345,7 +1358,7 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << " startIndexTracks: " << convoys[j].startIndexTracks <<" EndindexTracks: "<< convoys[j].endIndexTracks<< std::endl;
 #endif
 						break;
 
@@ -1387,7 +1400,7 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 						}
 						convoyFound = true;
 #ifdef PRINT
-						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << std::endl;
+						std::cout << "existing Convoy with ID " << convoys[j].ID << " y " << vehicle.getY() << " startIndexTracks: " << convoys[j].startIndexTracks <<" EndindexTracks: "<< convoys[j].endIndexTracks<< std::endl;
 #endif
 						break;
 					}
@@ -1918,17 +1931,23 @@ void ConvoyTracker::findConvoySelf(int ID)
 	std::cout << "ID1 " << id1  << " ID2 " << id2 << std::endl;
 #endif
 	bool convoyFound = false;
+	if(convoySize >0)
+	{
+		findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream3>>>(d_convoys_ptr, d_IDincluded_ptr,id1,id2);
+		checkConvoyForDuplicateDeviceSelf<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream2>>>(d_convoys_ptr,d_duplicate_ptr);
+		cudaDeviceSynchronize();
+	}
 	for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
 	{
-		int it1, it2;
+//		int it1, it2;
 		Convoy currentConvoy = convoys[j];
-		it1 = findIDinConvoy(currentConvoy, id1);
-		it2 = findIDinConvoy(currentConvoy, id2);
+		int it1 = h_IDincluded[j*2];
+		int it2 = h_IDincluded[j*2+1];
 		if(it1 != INT_MAX && it2 != INT_MAX)
 		{
 			//convoy already exists with both IDS
 			//check if this x value is already contained
-			if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+			if(h_duplicate[j])
 			{
 				//x value is not contained
 				int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
@@ -1959,7 +1978,7 @@ void ConvoyTracker::findConvoySelf(int ID)
 		{
 			int index = (currentConvoy.endIndexTracks+1)%MAX_LENGTH_HIST_CONV;
 			//check if this x value is already contained
-			if(checkConvoyForDuplicate(interval+0.5, currentConvoy))
+			if(h_duplicate[j])
 			{
 				convoys[j].tracks[currentConvoy.endIndexTracks].x = 0.5;
 				convoys[j].tracks[currentConvoy.endIndexTracks].y = 0;
