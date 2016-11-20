@@ -1251,7 +1251,6 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 	if(historySize > 0 && convoyCheckSize >0)
 	{
 		cudaMemcpy(d_newVeh, h_convoyCheck, convoyCheckSize*sizeof(PointCellDevice), cudaMemcpyHostToDevice);
-		cudaMemcpy(d_history, history, historySize*sizeof(History), cudaMemcpyHostToDevice);
 		dim3 grid(historySize, convoyCheckSize);
 		findConvoyDevice<<<grid, MAX_LENGTH_HIST_CONV>>>(d_newVeh,d_history,d_historyMatch);
 		cudaMemcpy(h_historyMatch, d_historyMatch, convoyCheckSize*sizeof(int), cudaMemcpyDeviceToHost);
@@ -1275,8 +1274,8 @@ void ConvoyTracker::associateAndUpdate(int vehicleCount, std::vector<PointCellDe
 					cudaDeviceSynchronize();
 					findIDInConvoyDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream3>>>(d_convoys, d_IDincluded,id1,id2);
 					checkConvoyForDuplicateDevice<<<convoySize, MAX_LENGTH_HIST_CONV,0,stream2>>>(d_convoys, &(d_newVeh[i]),d_duplicate);
-					cudaMemcpyAsync(h_IDincluded, d_IDincluded, convoySize*2*sizeof(int), cudaMemcpyDeviceToHost, stream2);
-					cudaMemcpyAsync(h_duplicate, d_duplicate, convoySize*sizeof(bool), cudaMemcpyDeviceToHost, stream3);
+					cudaMemcpyAsync(h_IDincluded, d_IDincluded, convoySize*2*sizeof(int), cudaMemcpyDeviceToHost, stream3);
+					cudaMemcpyAsync(h_duplicate, d_duplicate, convoySize*sizeof(bool), cudaMemcpyDeviceToHost, stream2);
 					cudaDeviceSynchronize();
 				}
 				for(uint j = startIndexConvoys; j != endIndexConvoys; j = (j+1)%NUM_CONV)
@@ -1685,11 +1684,6 @@ void ConvoyTracker::rotateConvoyHistory(double theta, double y)
 
 void ConvoyTracker::visualizeConvoys()
 {
-	printf("ConvoySize");
-	for(int i=0; i<convoySize;i++)
-	{
-		std::cout << convoys[i].startIndexTracks << " " << convoys[i].endIndexTracks << std::endl;
-	}
 	visualizer.visualizeConvoys(EML, convoys, startIndexConvoys, endIndexConvoys);
 }
 

@@ -21,7 +21,7 @@
 #define MAX_SEGMENTS 193
 #define CONVOY_THRESHOLD_Y 2
 
-#define PRINT
+//#define PRINT
 //#define VISUALIZE
 //#define CREATE_MEASURES
 
@@ -38,7 +38,7 @@
  *
  * Szenario 6: Same as Scenario 5, but with 20 simulated cars
  */
-#define SZENARIO 1
+#define SZENARIO 5
 
 #if SZENARIO == 1
 /*
