@@ -29,10 +29,10 @@ public:
 	DataVisualizer();
 	virtual ~DataVisualizer();
 
-	void visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number);
+	void visualizeSegmentsAsPointCloud(cartesian_segment* segments, std::string number, int segment_count);
 	void visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number);
-	void visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> convoys);
-	void visualizeHistory(std::vector<Pos> EML,std::map<int, std::vector<PointCellDevice> > history);
+	void visualizeConvoys(std::vector<EMLPos> EML, Convoy* convoys, int startIndexConvoys, int endIndexConvoys);
+	void visualizeHistory(std::vector<EMLPos> EML, History* history, int startIndex, int endIndex);
 
 private:
 	std::string colors[20];

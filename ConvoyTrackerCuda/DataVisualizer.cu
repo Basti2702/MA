@@ -37,7 +37,7 @@ DataVisualizer::~DataVisualizer() {
 /*
  * Creates an SVG File (http://www.w3schools.com/svg/svg_inhtml.asp) to visualize the segments as pointcloud
  */
-void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment> segments, std::string number)
+void DataVisualizer::visualizeSegmentsAsPointCloud(cartesian_segment* segments, std::string number, int segment_count)
 {
 	  std::ofstream myfile;
 	  std::ostringstream filename;
@@ -47,9 +47,9 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(std::vector<cartesian_segment
 	  myfile << "<html>" << std::endl;
 	  myfile << "<body>" << std::endl;
 	  myfile << "<svg width=\""<< CANVASSIZE <<"\" height=\"" << CANVASSIZE << "\">" << std::endl;
-	  for(uint i=0; i<segments.size(); i++)
+	  for(uint i=0; i<segment_count; i++)
 	  {
-		cartesian_segment seg = segments.at(i);
+		cartesian_segment seg = segments[i];
 		for(int j=0; j<seg.numberOfMeasures; j++)
 		{
 			laserdata_cartesian data = seg.measures[j];
@@ -121,7 +121,7 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 	myfile.close();
 }
 
-void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> convoys)
+void DataVisualizer::visualizeConvoys(std::vector<EMLPos> EML, Convoy* convoys, int startIndexConvoys, int endIndexConvoys)
 {
 	int xOnCanvas = CANVASSIZE;
 	int yOnCanvas = CANVASSIZE/2;
@@ -136,14 +136,14 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 			<< "\">" << std::endl;
 
 	//visualize Convoys
-	Pos lastPos = EML.at(EML.size() -1);
-	for(uint i = 0; i < convoys.size(); i++)
+	EMLPos lastPos = EML.at(EML.size() -1);
+	for (uint i = startIndexConvoys; i != endIndexConvoys; i = (i + 1) % NUM_CONV)
 	{
-		Convoy curConv = convoys.at(i);
+		Convoy curConv = convoys[i];
 		myfile << "<polyline points=\"";
-		for(uint j = 0; j< curConv.tracks.size(); j++)
+		for(uint j = curConv.startIndexTracks; j != curConv.endIndexTracks; j = (j+1)%MAX_LENGTH_HIST_CONV)
 		{
-			Pos curPos =  curConv.tracks.at(j);
+			EMLPos curPos =  curConv.tracks[j];
 			double x = curPos.x;
 			double y = curPos.y;
 			xOnCanvas = CANVASSIZE;
@@ -162,7 +162,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 	myfile << "<polyline points=\"";
 	for(uint i = 0; i<EML.size(); i++)
 	{
-		Pos curPos = EML.at(i);
+		EMLPos curPos = EML.at(i);
 
 		xOnCanvas = CANVASSIZE;
 		yOnCanvas = CANVASSIZE/2;
@@ -180,7 +180,7 @@ void DataVisualizer::visualizeConvoys(std::vector<Pos> EML, std::vector<Convoy> 
 }
 
 
-void DataVisualizer::visualizeHistory(std::vector<Pos> EML, std::map<int, std::vector<PointCellDevice> > history)
+void DataVisualizer::visualizeHistory(std::vector<EMLPos> EML, History* history, int startIndex, int endIndex)
 {
 	int xOnCanvas = CANVASSIZE;
 	int yOnCanvas = CANVASSIZE/2;
@@ -199,7 +199,7 @@ void DataVisualizer::visualizeHistory(std::vector<Pos> EML, std::map<int, std::v
 	myfile << "<polyline points=\"";
 	for(uint i = 0; i<EML.size(); i++)
 	{
-		Pos curPos = EML.at(i);
+		EMLPos curPos = EML.at(i);
 
 		xOnCanvas = CANVASSIZE;
 		yOnCanvas = CANVASSIZE/2;
@@ -211,24 +211,23 @@ void DataVisualizer::visualizeHistory(std::vector<Pos> EML, std::map<int, std::v
 	}
 	myfile << "\" style=\"fill:none;stroke:green;stroke-width:4\" />" << std::endl;
 
-	Pos lastPos = EML.at(EML.size() -1);
-	for (std::map<int,std::vector<PointCellDevice> >::iterator it=history.begin(); it!=history.end(); ++it)
+	EMLPos lastPos = EML.at(EML.size() -1);
+	for (int i = startIndex; i != endIndex; i = (i+1)%NUM_HIST)
 	{
-		int index = it->first;
+		int index = history[i].ID;
 		if(index > 20)
 		{
 			index = 20;
 		}
-		std::vector<PointCellDevice> history = it->second;
 		myfile << "<polyline points=\"";
-		for(uint i = 0; i < history.size(); i++)
+		for (uint j = history[i].startIndex; j != history[i].endIndex; j = (j+1)%MAX_LENGTH_HIST_CONV)
 		{
-			PointCellDevice curPos = history.at(i);
+			EMLPos curPos = history[i].tracks[j];
 			xOnCanvas = CANVASSIZE;
 			yOnCanvas = CANVASSIZE/2;
 
-			xOnCanvas -= ((curPos.getX() + lastPos.x) * CANVASFACTOR);
-			yOnCanvas += ((curPos.getY() + lastPos.y) * CANVASFACTOR);
+			xOnCanvas -= ((curPos.x + lastPos.x) * CANVASFACTOR);
+			yOnCanvas += ((curPos.y + lastPos.y) * CANVASFACTOR);
 
 			myfile << yOnCanvas << "," << xOnCanvas << " ";
 		}

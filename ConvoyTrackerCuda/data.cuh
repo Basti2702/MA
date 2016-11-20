@@ -18,9 +18,11 @@
 #define MAX_LENGTH_HIST_CONV 512
 #define NUM_HIST 196
 #define NUM_CONV 20
-#define MAX_SEGMENTS 194
+#define MAX_SEGMENTS 193
+#define CONVOY_THRESHOLD_Y 2
 
-//#define PRINT
+#define PRINT
+//#define VISUALIZE
 //#define CREATE_MEASURES
 
 /**
@@ -32,6 +34,9 @@
  * 			   but there is a obstacle in this lane so the cars move to the middle lane to avoid contact but move back to the left lane behind this obstacle
  * Szenario 4: own car is changing the lane
  *
+ * Szenario 5: Convoys on both sides of the car, 1000 iterations
+ *
+ * Szenario 6: Same as Scenario 5, but with 20 simulated cars
  */
 #define SZENARIO 1
 
@@ -72,6 +77,11 @@
 	#define MEASUREPATH "./Laserdata/Szenario5/Measure/LaserMessung"
 	#define EMLPATH "./Laserdata/Szenario5/EML/EML"
 	#define VISUALIZATIONPATH "./Visualization/Szenario5"
+#elif SZENARIO == 6
+	#define NUM_MEASUREMENT 1000
+	#define MEASUREPATH "./Laserdata/Szenario5/Measure/LaserMessung"
+	#define EMLPATH "./Laserdata/Szenario5/EML/EML"
+	#define VISUALIZATIONPATH "./Visualization/Szenario6"
 #endif
 
 
@@ -101,14 +111,25 @@ typedef struct EMLPos{
 	double y;
 	double theta;
 	double subIntvl;
-} Pos;
+} EMLPos;
 
 typedef struct Convoy{
 	int ID;
-	std::vector<int> participatingVehicles;
-	std::vector<EMLPos> tracks;
+	int participatingVehicles[MAX_LENGTH_HIST_CONV];
+	EMLPos tracks[MAX_LENGTH_HIST_CONV];
+	int startIndexTracks;
+	int startIndexID;
+	int endIndexTracks;
+	int endIndexID;
+	EMLPos highestValue;
+
 } Convoy;
 
-
+typedef struct History{
+	int ID;
+	EMLPos tracks[MAX_LENGTH_HIST_CONV];
+	int startIndex;
+	int endIndex;
+} History;
 
 #endif /* DATA_H_ */

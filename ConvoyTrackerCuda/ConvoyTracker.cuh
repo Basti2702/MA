@@ -17,14 +17,12 @@
 #include "DataReader.cuh"
 #include "data.cuh"
 #include "PGMReader.cuh"
-#include "PointCell.cuh"
 #include "PointCellDevice.cuh"
 #include "DataVisualizer.cuh"
 
 #include <cuda.h>
 
 #define ASSOCIATION_THRESHOLD 4
-#define ASSOCIATION_Y_THRESHOLD 2
 
 class ConvoyTracker {
 public:
@@ -32,31 +30,54 @@ public:
 	virtual ~ConvoyTracker();
 
 	DataReader reader;
-//	IntervalMap intervalMap;
-	std::vector<PointCellDevice> intervalMap;
-	int setMem[MAX_SEGMENTS];
+//	std::vector<PointCellDevice> intervalMap;
+	PointCellDevice* h_intervalMap;
+	PointCellDevice* d_intervalMap;
+	int intervalSize;
 
 	//pointer for device
-	PointCellDevice* d_history;
+	History* d_history;
 	PointCellDevice* d_newVeh;
+	PointCellDevice* h_convoyCheck;
+	PointCellDevice* h_vehicles;
+	PointCellDevice* d_vehicles;
+	int convoyCheckSize;
 	int* d_historyMatch;
 	int* h_historyMatch;
 	int* h_historyMatchSelf;
 	int* d_historyMatchSelf;
-	EMLPos* d_convoys;
+	Convoy* d_convoys;
 
 	double* xSubInterval;
 	double* d_subIntvl_ptr;
-	bool memset;
+	int* h_IDincluded;
+	int* d_IDincluded;
+	bool* h_duplicate;
+	bool* d_duplicate;
+	double* h_updateData;
+	double* d_updataData;
+	int* h_intvlIndex;
+	int* d_intvlIndex;
+	double* h_distance;
+	double* d_distance;
 
-//	std::vector<double*> intervalPointer;
-//	std::vector<double*> historyPointer;
+	History* history;
+	int startIndexHistory;
+	int endIndexHistory;
+	int historySize;
 
-	std::map<int, std::vector<PointCellDevice> > history;
-	std::vector<Convoy>convoys;
+	Convoy* convoys;
+	int startIndexConvoys;
+	int endIndexConvoys;
+	int convoySize;
+
+	PointCellDevice* h_vehicleSim;
+	PointCellDevice* d_vehicleSim;
+
+	cudaStream_t stream2, stream3, stream4, stream5;
 
 	void readEMLData(std::string number);
-	void associateAndUpdate(std::vector<PointCellDevice> vehicles, std::vector<PointCellDevice*> trackedVehicles);
+	void associateAndUpdate(int vehicleCount, std::vector<PointCellDevice*> trackedVehicles);
 	void findConvoy(PointCellDevice vehicle);
 	void shiftConvoyHistory(double x);
 	void rotateConvoyHistory(double theta, double y);
@@ -84,7 +105,6 @@ public:
 	void transformDataToDevice();
 	void transformDataFromDevice();
 	void findConvoySelf(int ID);
-
 private:
 	int ID;
 	int convoyID;
@@ -101,10 +121,14 @@ private:
 	DataVisualizer visualizer;
 
 
-	std::vector<Pos> EML;
+	std::vector<EMLPos> EML;
 
 	bool checkConvoyForDuplicate(double x, Convoy c);
-	bool checkHistoryForDuplicate(double x, std::vector<PointCellDevice> c);
+	bool checkHistoryForDuplicate(double x, int historyIndex);
+	int findIDinConvoy(Convoy c, int id);
+	int findHistoryWithID(int id);
+	bool checkConvoyForY(double y, double x, Convoy c);
+
 };
 
 #endif /* CONVOYTRACKER_H_ */

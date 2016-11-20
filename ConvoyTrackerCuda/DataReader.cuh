@@ -29,7 +29,7 @@ public:
 	DataReader();
 	virtual ~DataReader();
 
-	std::vector<PointCellDevice> processLaserData(std::string number, double currentSpeed, double currentYawRate);
+	int processLaserData(std::string number, double currentSpeed, double currentYawRate, PointCellDevice* h_vehicles);
 
 private:
 	DataVisualizer visualizer;
@@ -37,35 +37,32 @@ private:
 	double currentYawRate;
 	cartesian_segment* d_carSegs;
 	raw_segment* d_rawSegs;
-	laserdata_cartesian* d_carLaser;
-	PointCellDevice* d_vehicles;
-	std::vector<double*> d_vehicleData;
-	std::vector<laserdata_cartesian*> d_carMeasure;
-	std::vector<laserdata_raw*> d_rawMeasure;
 	unsigned long long* d_minDistance;
 	unsigned int* d_index;
 
+	unsigned int* h_index;
+	unsigned long long* h_minDistance;
 	laserdata_raw* d_data;
-	laserdata_raw* d_data_ptr;
 	laserdata_raw* h_data;
+	laserdata_cartesian* h_relMeas;
+	laserdata_cartesian* d_relMeas;
 	double* d_dist;
-	double* d_dist_ptr;
 	double* d_thresh;
-	double* d_thresh_ptr;
-	int* d_numSegments;
 
 	double* dist;
 	double* thresh;
 
-	cudaStream_t stream1;
+	cudaStream_t stream0, stream1;
 
-	std::vector<raw_segment> segments;
+	raw_segment* raw_segments;
+	cartesian_segment* car_segments;
 
 	void readEMLData(std::string number);
 	int getLaserData(laserdata_raw_array data, std::string number);
 	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
 	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
-	std::vector<PointCellDevice> computeVehicleState(std::vector<cartesian_segment> segments, std::string number);
+	int computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number, PointCellDevice* h_vehicles);
+	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
 	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };
 
