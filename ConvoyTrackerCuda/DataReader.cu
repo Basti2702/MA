@@ -9,7 +9,6 @@
 
 
 DataReader::DataReader() {
-	// TODO Auto-generated constructor stub
 	cudaError_t error;
 	cudaStreamCreate(&stream1);
 	cudaStreamCreate(&stream0);
@@ -25,13 +24,13 @@ DataReader::DataReader() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &dist, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocDefault);
+	error = cudaHostAlloc((void**) &dist, NUMBER_LASERRAYS*sizeof(float), cudaHostAllocDefault);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaMalloc((void**) &d_dist, NUMBER_LASERRAYS*sizeof(double));
+	error = cudaMalloc((void**) &d_dist, NUMBER_LASERRAYS*sizeof(float));
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -49,13 +48,13 @@ DataReader::DataReader() {
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaHostAlloc((void**) &thresh, NUMBER_LASERRAYS*sizeof(double), cudaHostAllocDefault);
+	error = cudaHostAlloc((void**) &thresh, NUMBER_LASERRAYS*sizeof(float), cudaHostAllocDefault);
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
 	}
 
-	error = cudaMalloc((void**) &d_thresh, NUMBER_LASERRAYS*sizeof(double));
+	error = cudaMalloc((void**) &d_thresh, NUMBER_LASERRAYS*sizeof(float));
 	if (error != cudaSuccess) {
 		printf("cudaGetDevice returned error %s (code %d), line(%d)\n",
 				cudaGetErrorString(error), error, __LINE__);
@@ -99,7 +98,7 @@ DataReader::DataReader() {
 }
 
 DataReader::~DataReader() {
-	// TODO Free device memory
+	// Free device memory
 	cudaFreeHost(h_data);
 	cudaFreeHost(dist);
 	cudaFreeHost(thresh);
@@ -121,16 +120,15 @@ DataReader::~DataReader() {
 }
 __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian* d_laser, unsigned long long* dist)
 {
-//	printf("Block %d entered Min\n", blockIdx.x);
 	int index = blockIdx.x*3;
 	d_laser[index] = carSegs[blockIdx.x].measures[0];
 	d_laser[index+2] = carSegs[blockIdx.x].measures[carSegs[blockIdx.x].numberOfMeasures-1];
 	unsigned long long tmp;
 	if(threadIdx.x < carSegs[blockIdx.x].numberOfMeasures)
 	{
-		double x = carSegs[blockIdx.x].measures[threadIdx.x].x;
-		double y = carSegs[blockIdx.x].measures[threadIdx.x].y;
-		tmp = sqrt(x*x + y*y)*10000;
+		float x = carSegs[blockIdx.x].measures[threadIdx.x].x;
+		float y = carSegs[blockIdx.x].measures[threadIdx.x].y;
+		tmp = sqrtf(x*x + y*y)*10000;
 		atomicMin(&(dist[blockIdx.x]), tmp);
 		__syncthreads();
 		if(dist[blockIdx.x] == tmp)
@@ -140,29 +138,28 @@ __global__ void getRelevantMeas(cartesian_segment* carSegs, laserdata_cartesian*
 	}
 }
 
-__device__ double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2)
+__device__ float computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2)
 {
-	double square1 = p1.distance*p1.distance;
-	double square2 = p2.distance*p2.distance;
-	double deltaAlpha = p2.angle-p1.angle;
-	deltaAlpha = (deltaAlpha * M_PI / 180.0);
-	return sqrt(square1+square2-2*p1.distance*p2.distance*cos(deltaAlpha));
+	float square1 = p1.distance*p1.distance;
+	float square2 = p2.distance*p2.distance;
+	float deltaAlpha = p2.angle-p1.angle;
+	deltaAlpha = (deltaAlpha * ((float)M_PI) / 180.0f);
+	return sqrtf(square1+square2-2*p1.distance*p2.distance*cosf(deltaAlpha));
 }
-__device__ double computeThreshold(laserdata_raw p1, laserdata_raw p2)
+__device__ float computeThreshold(laserdata_raw p1, laserdata_raw p2)
 {
-	//https://www.researchgate.net/publication/243773062_Model_Based_Object_Classification_and_Tracking_in_Traffic_Scenes_from_Range_Images
-	double C0 = 1.0;
-	double C1;
-	double min_distance = p2.distance;
-	double deltaAlpha;
-	deltaAlpha = (0.25 * M_PI / 180.0);
+	float C0 = 1.0f;
+	float C1;
+	float min_distance = p2.distance;
+	float deltaAlpha;
+	deltaAlpha = (0.25f * ((float)M_PI) / 180.0f);
 
 	if(p1.distance < p2.distance)
 	{
 		min_distance = p1.distance;
 	}
 
-	C1 = sqrt(2*(1-cos(deltaAlpha)));
+	C1 = sqrtf(2*(1-cosf(deltaAlpha)));
 
 	return C0 + C1*min_distance;
 }
@@ -171,13 +168,13 @@ __device__ void doCoordinateTransformDevice(raw_segment* rawSegs, cartesian_segm
 {
 		carSegs[segIndex].numberOfMeasures = rawSegs[segIndex].numberOfMeasures;
 
-		double angleInRadians;
+		float angleInRadians;
 
 		if(laserIndex < rawSegs[segIndex].numberOfMeasures)
 		{
-			angleInRadians = rawSegs[segIndex].measures[laserIndex].angle * M_PI / 180.0;
-			carSegs[segIndex].measures[laserIndex].x = rawSegs[segIndex].measures[laserIndex].distance*cos(angleInRadians);
-			carSegs[segIndex].measures[laserIndex].y = rawSegs[segIndex].measures[laserIndex].distance*sin(angleInRadians);
+			angleInRadians = rawSegs[segIndex].measures[laserIndex].angle * ((float)M_PI) / 180.0f;
+			carSegs[segIndex].measures[laserIndex].x = rawSegs[segIndex].measures[laserIndex].distance*cosf(angleInRadians);
+			carSegs[segIndex].measures[laserIndex].y = rawSegs[segIndex].measures[laserIndex].distance*sinf(angleInRadians);
 		}
 
 }
@@ -186,11 +183,11 @@ __global__ void coordinateTransform(raw_segment* rawSegs, cartesian_segment* car
 {
 	doCoordinateTransformDevice(rawSegs, carSegs, blockIdx.x, threadIdx.x);
 }
-__global__ void processDist(laserdata_raw* data, double* distance)
+__global__ void processDist(laserdata_raw* data, float* distance)
 {
 	distance[threadIdx.x] = computeEuclideanDistance(data[threadIdx.x], data[threadIdx.x + 1]);
 }
-__global__ void processThresh(laserdata_raw* data, double* threshold)
+__global__ void processThresh(laserdata_raw* data, float* threshold)
 {
 	threshold[threadIdx.x] = computeThreshold(data[threadIdx.x], data[threadIdx.x + 1]);
 }
@@ -225,12 +222,6 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
 	 *    Laser
 	 */
 	double angle = -72.5;
-
-    //Skip first 581 lines, just read out the second level of datas
-  /*  while(counter < NUMBER_LASERRAYS && std::getline( input, line )) {
-    	++counter;
-  //  	std::cout<< counter <<'\n';
-    }*/
 
     //now read the data we are interested in
     counter = 0;
@@ -267,7 +258,6 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
     					data[counter].distance = atof(segment.c_str());
     			    	break;
     				}
-    		//		std::cout<<segment << ' ';
             		++datacnt;
     			}
     		}
@@ -275,7 +265,6 @@ int DataReader::getLaserData(laserdata_raw_array data, std::string number)
     	if(valid)
     	{
     		data[counter].angle = angle;
-    //		std::cout<< "Angle: " << data[counter].angle << " Distance: " << data[counter].distance << " Valid: " << data[counter].valid << '\n';
 	    	++counter;
     	}
     	angle += 0.25;
@@ -318,8 +307,8 @@ int DataReader::processLaserData(std::string number, double currentSpeed, double
 	raw_segments[MAX_SEGMENTS].numberOfMeasures = 1;
 	raw_segments[MAX_SEGMENTS].measures[0] = h_data[0];
 
-	cudaMemcpyAsync(dist, d_dist, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost, stream1);
-	cudaMemcpyAsync(thresh, d_thresh, (numElements-1)*sizeof(double), cudaMemcpyDeviceToHost, stream0);
+	cudaMemcpyAsync(dist, d_dist, (numElements-1)*sizeof(float), cudaMemcpyDeviceToHost, stream1);
+	cudaMemcpyAsync(thresh, d_thresh, (numElements-1)*sizeof(float), cudaMemcpyDeviceToHost, stream0);
 	cudaStreamSynchronize(stream1);
 	cudaStreamSynchronize(stream0);
 	cudaMemcpyAsync(d_minDistance, h_minDistance, MAX_SEGMENTS*sizeof(unsigned long long), cudaMemcpyHostToDevice,stream0);
@@ -376,40 +365,6 @@ int DataReader::processLaserData(std::string number, double currentSpeed, double
 	cudaStreamSynchronize(stream1);
 	int vehicles = computeVehicleState(car_segments, segment_counter, number, h_vehicles);
 	return vehicles;
-}
-
-/*
- * ANMERKUNG: KÖNNTE FÜR GESAMTES ARRAY PARALLEL BERECHNET WERDEN!!
- *
- */
-double DataReader::computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2)
-{
-	double square1 = p1.distance*p1.distance;
-	double square2 = p2.distance*p2.distance;
-	double deltaAlpha = p2.angle-p1.angle;
-	deltaAlpha = (deltaAlpha * M_PI / 180.0);
-	return sqrt(square1+square2-2*p1.distance*p2.distance*cos(deltaAlpha));
-}
-
-double DataReader::computeThreshold(laserdata_raw p1, laserdata_raw p2)
-{
-	//https://www.researchgate.net/publication/243773062_Model_Based_Object_Classification_and_Tracking_in_Traffic_Scenes_from_Range_Images
-	double C0 = 1.0;
-	double C1;
-	double min_distance = p2.distance;
-
-	double deltaAlpha;
-	deltaAlpha = (0.25 * M_PI / 180.0);
-
-	if(p1.distance < p2.distance)
-	{
-		min_distance = p1.distance;
-	}
-
-	C1 = sqrt(2*(1-cos(deltaAlpha)));
-
-	return C0 + C1*min_distance;
-
 }
 
 int DataReader::computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number, PointCellDevice* h_vehicles)
@@ -470,12 +425,8 @@ int DataReader::computeVehicleState(cartesian_segment* segments, int segmentCoun
 		}
 		if(theta > 60 && width > 1)
 		{
-		//	PointCellDevice vehicle;
-			//vehicle.width = width;
 			double y = relevantPoints[left].y + width/2;
 			h_vehicles[counter].initializeMemory();
-		//	vehicle.setX(relevantPoints[left].x + length/2);//x
-		//	vehicle.setY(relevantPoints[left].y + width/2); // y
 			h_vehicles[counter].setX(relevantPoints[left].x + length/2);//x
 			h_vehicles[counter].setY(relevantPoints[left].y + width/2); // y
 			//now compute theta regarding to movement direction
@@ -495,39 +446,30 @@ int DataReader::computeVehicleState(cartesian_segment* segments, int segmentCoun
 				break;
 			}
 			theta = atan(width/length);
-			//vehicle.setTheta(theta*M_PI / 180.0); //theta
 			h_vehicles[counter].setTheta(theta*M_PI / 180.0); //theta
 			//due to prior knowledge on highways, velocitys for diffrent lanes are estimated as below
 			if(y < -4.5)
 			{
-				//vehicle.setVelocity(currentSpeed + 11.11); //velocity + 40kmh
 				h_vehicles[counter].setVelocity(currentSpeed + 11.11); //velocity + 40kmh
 			}
 			else if(y < -1.5)
 			{
-				//vehicle.setVelocity(currentSpeed + 5.55); //velocity + 20kmh
 				h_vehicles[counter].setVelocity(currentSpeed + 5.55); //velocity + 20kmh
 			}
 			else if(y > 4.5)
 			{
-				//vehicle.setVelocity(currentSpeed - 11.11); //velocity - 40kmh
 				h_vehicles[counter].setVelocity(currentSpeed - 11.11); //velocity - 40kmh
 			}
 			else if(y > 1.5)
 			{
-				//vehicle.setVelocity(currentSpeed - 5.55); //velocity - 20kmh
 				h_vehicles[counter].setVelocity(currentSpeed - 5.55); //velocity - 20kmh
 			}
 			else
 			{
-				//vehicle.setVelocity(currentSpeed); //velocity
 				h_vehicles[counter].setVelocity(currentSpeed); //velocity
 			}
-		//	vehicle.setPhi(currentYawRate); //yaw rate
-		//	vehicle.subInvtl = 0.5;
 			h_vehicles[counter].setPhi(currentYawRate); //yaw rate
 			h_vehicles[counter].subInvtl = 0.5;
-			//vehicles.push_back(vehicle);
 			++counter;
 			std::vector<laserdata_cartesian> tmp;
 			tmp.push_back(relevantPoints[0]);
@@ -544,36 +486,3 @@ int DataReader::computeVehicleState(cartesian_segment* segments, int segmentCoun
 #endif
 	return counter;
 }
-
-/**
- * Returns the a vector containing the left border, the nearest point and the right border of a given segment
- */
-std::vector<laserdata_cartesian> DataReader::getRelevantMeasuresFromSegment(cartesian_segment segment)
-{
-	std::vector<laserdata_cartesian> relevantMeasures;
-	double leastMeasure = INT_MAX;
-	laserdata_cartesian leastLaser;
-	//left border is always the first measure in a segment
-	relevantMeasures.push_back(segment.measures[0]);
-
-	//Search for the measure with the least distance to ourself
-	double tmp;
-	laserdata_cartesian tmpLaser;
-	for(int i=0; i<segment.numberOfMeasures; i++)
-	{
-		tmpLaser = segment.measures[i];
-		tmp = sqrt(tmpLaser.x * tmpLaser.x + tmpLaser.y * tmpLaser.y);
-		if(tmp < leastMeasure)
-		{
-			leastLaser = tmpLaser;
-			leastMeasure = tmp;
-		}
-	}
-	relevantMeasures.push_back(leastLaser);
-	//right border is always the last measure in a segment
-	relevantMeasures.push_back(segment.measures[segment.numberOfMeasures-1]);
-
-	return relevantMeasures;
-}
-
-

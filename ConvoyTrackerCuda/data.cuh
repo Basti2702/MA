@@ -12,7 +12,7 @@
 
 #define NUMBER_LASERRAYS 581
 #define CARINTERVAL 5
-#define TIMESTAMP 0.04 //40ms -> 25hz
+#define TIMESTAMP 0.04f //40ms -> 25hz
 #define NUMBER_OF_INTERVALS 100
 #define INTERVALL_LENGTH 1
 #define MAX_LENGTH_HIST_CONV 512
@@ -38,7 +38,7 @@
  *
  * Szenario 6: Same as Scenario 5, but with 20 simulated cars
  */
-#define SZENARIO 5
+#define SZENARIO 6
 
 #if SZENARIO == 1
 /*
@@ -86,14 +86,14 @@
 
 
 typedef struct laserdata_raw{
-	double angle;
-	double distance;
+	float angle;
+	float distance;
 	int valid;
 }laserdata_raw_array[NUMBER_LASERRAYS];
 
 struct laserdata_cartesian{
-	double x;
-	double y;
+	float x;
+	float y;
 };
 
 struct raw_segment{
@@ -107,10 +107,10 @@ struct cartesian_segment{
 };
 
 typedef struct EMLPos{
-	double x;
-	double y;
-	double theta;
-	double subIntvl;
+	float x;
+	float y;
+	float theta;
+	float subIntvl;
 } EMLPos;
 
 typedef struct Convoy{

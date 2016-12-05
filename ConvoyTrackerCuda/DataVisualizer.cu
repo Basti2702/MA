@@ -8,7 +8,7 @@
 #include "DataVisualizer.cuh"
 
 DataVisualizer::DataVisualizer() {
-	// TODO Auto-generated constructor stub
+
 	colors[0] = "#ff0000";
 	colors[1] = "#ff8000";
 	colors[2] = "#ffff00";
@@ -32,7 +32,7 @@ DataVisualizer::DataVisualizer() {
 }
 
 DataVisualizer::~DataVisualizer() {
-	// TODO Auto-generated destructor stub
+
 }
 /*
  * Creates an SVG File (http://www.w3schools.com/svg/svg_inhtml.asp) to visualize the segments as pointcloud
@@ -71,8 +71,6 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(cartesian_segment* segments, 
 			}
 
 			myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"" << color <<"\" stroke-width=\"4\" fill=\"" << color <<"\"/>" << std::endl;
-		//	myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"blue\" stroke-width=\"4\" fill=\"blue\"/>" << std::endl;
-
 		}
 	  }
 	  myfile << "</svg>" << std::endl;
@@ -113,7 +111,6 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 				<< bx << " " << cy << "," << cx
 				<< "\" style=\"fill:none;stroke:" << colors[i]
 				<< ";stroke-width:3\" />" << std::endl;
-		//	myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"blue\" stroke-width=\"4\" fill=\"blue\"/>" << std::endl;
 	}
 	myfile << "</svg>" << std::endl;
 	myfile << "</body>" << std::endl;

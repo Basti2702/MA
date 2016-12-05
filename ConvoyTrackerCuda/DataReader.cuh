@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <limits.h>
 #include <cuda.h>
-#include "PointCell.cuh"
 #include "PointCellDevice.cuh"
 
 
@@ -46,11 +45,11 @@ private:
 	laserdata_raw* h_data;
 	laserdata_cartesian* h_relMeas;
 	laserdata_cartesian* d_relMeas;
-	double* d_dist;
-	double* d_thresh;
+	float* d_dist;
+	float* d_thresh;
 
-	double* dist;
-	double* thresh;
+	float* dist;
+	float* thresh;
 
 	cudaStream_t stream0, stream1;
 
@@ -59,11 +58,7 @@ private:
 
 	void readEMLData(std::string number);
 	int getLaserData(laserdata_raw_array data, std::string number);
-	double computeEuclideanDistance(laserdata_raw p1, laserdata_raw p2);
-	double computeThreshold(laserdata_raw p1, laserdata_raw p2);
 	int computeVehicleState(cartesian_segment* segments, int segmentCounter, std::string number, PointCellDevice* h_vehicles);
-	std::vector<cartesian_segment> doCoordinateTransform(std::vector<raw_segment> segments);
-	std::vector<laserdata_cartesian> getRelevantMeasuresFromSegment(cartesian_segment segment);
 };
 
 #endif /* DATAREADER_H_ */

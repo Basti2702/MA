@@ -5,16 +5,16 @@
  */
 PointCellDevice::PointCellDevice()
 {
-//	data = (double*) malloc(260*sizeof(double));
 	initializeMemory();
 	subInvtl = 0.5;
 }
 
 PointCellDevice::~PointCellDevice()
 {
-//	free(data);
 }
-
+/*
+ * set initial values to all matrices and vectors
+ */
 __host__ __device__ void PointCellDevice::initializeMemory()
 {
 	//initialize data to 0
@@ -38,20 +38,22 @@ __host__ __device__ void PointCellDevice::initializeMemory()
 	data[10 + 2*5 +4] = TIMESTAMP;
 
 	//Q
-	data[160] = 0.000006;
-	data[160 + 1*5 + 1] = 0.000006;
-	data[160 + 2*5 + 2] = 0.0004;
-	data[160 + 3*5 + 3] = 0.03097;
-	data[160 + 4*5 + 4] = 0.0004;
+	data[160] = 0.000006f;
+	data[160 + 1*5 + 1] = 0.000006f;
+	data[160 + 2*5 + 2] = 0.0004f;
+	data[160 + 3*5 + 3] = 0.03097f;
+	data[160 + 4*5 + 4] = 0.0004f;
 
 	//R
-	data[85] = 0.36;
-	data[85 + 1*5 + 1] = 0.36;
-	data[85 + 2*5 + 2] = 0.5;
-	data[85 + 3*5 + 3] = 0.1;
-	data[85 + 4*5 + 4] = 0.1;
+	data[85] = 0.36f;
+	data[85 + 1*5 + 1] = 0.36f;
+	data[85 + 2*5 + 2] = 0.5f;
+	data[85 + 3*5 + 3] = 0.1f;
+	data[85 + 4*5 + 4] = 0.1f;
 }
-
+/*
+ * perfrom kalman filter predict step
+ */
 __host__ __device__ void PointCellDevice::predict()
 {
 	//store copy of stateVector
@@ -59,10 +61,12 @@ __host__ __device__ void PointCellDevice::predict()
 	{
 		data[i+5] = data[i];
 	}
+	//estimate new state
 	computeF();
+	//compute new state covariance
 	computeCovarianceF();
 
-	double tmp = 0;
+	float tmp = 0;
 	// Tmp = F*P
 	for(int i=0; i<5; i++)
 	{
@@ -101,29 +105,31 @@ __host__ __device__ void PointCellDevice::predict()
 		}
 	}
 }
-
+/*
+ * estimates new state
+ */
 __host__ __device__ void PointCellDevice::computeF()
 {
-	double x = getX();
-	double y = getY();
-	double theta = getTheta();
-	double velocity = getVelocity();
-	double phi = getPhi();
+	float x = getX();
+	float y = getY();
+	float theta = getTheta();
+	float velocity = getVelocity();
+	float phi = getPhi();
 
-	double predictedX, predictedY, predictedTheta, predictedVel,predictedPhi;
+	float predictedX, predictedY, predictedTheta, predictedVel,predictedPhi;
 
 	if(phi > 0.0001)
 	{
-		predictedX = (velocity/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta)) + x;
-		predictedY = (velocity/phi) * (-cos(phi*TIMESTAMP + theta) + cos(theta)) + y;
+		predictedX = (velocity/phi) * (sinf(phi*TIMESTAMP + theta) - sinf(theta)) + x;
+		predictedY = (velocity/phi) * (-cosf(phi*TIMESTAMP + theta) + cosf(theta)) + y;
 		predictedTheta = phi*TIMESTAMP + theta;
 		predictedVel = velocity;
 		predictedPhi = phi;
 	}
 	else
 	{
-		predictedX = x + velocity * TIMESTAMP * cos(theta);
-		predictedY = y + velocity * TIMESTAMP * sin(theta);
+		predictedX = x + velocity * TIMESTAMP * cosf(theta);
+		predictedY = y + velocity * TIMESTAMP * sinf(theta);
 		predictedTheta = theta;
 		predictedVel = velocity;
 		predictedPhi = 0.00001;
@@ -135,22 +141,24 @@ __host__ __device__ void PointCellDevice::computeF()
 	setVelocity(predictedVel);
 	setPhi(predictedPhi);
 }
-
+/*
+ * computes new state covariance
+ */
 __host__ __device__ void PointCellDevice::computeCovarianceF()
 {
-	double theta = getTheta();
-	double velocity = getVelocity();
-	double phi = getPhi();
+	float theta = getTheta();
+	float velocity = getVelocity();
+	float phi = getPhi();
 
-	double f12, f13, f14, f22, f23, f24;
+	float f12, f13, f14, f22, f23, f24;
 
-	f12 = (velocity/phi) * (-cos(theta) + cos(TIMESTAMP*phi + theta));
-	f13 = (1/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta));
-	f14 = (((TIMESTAMP*velocity)/phi) * cos(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (sin(phi*TIMESTAMP + theta) - sin(theta)));
+	f12 = (velocity/phi) * (-cosf(theta) + cosf(TIMESTAMP*phi + theta));
+	f13 = (1/phi) * (sinf(phi*TIMESTAMP + theta) - sinf(theta));
+	f14 = (((TIMESTAMP*velocity)/phi) * cosf(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (sinf(phi*TIMESTAMP + theta) - sinf(theta)));
 
-	f22 = (velocity/phi) * (sin(phi*TIMESTAMP + theta) - sin(theta));
-	f23 = (1/phi) * (-cos(phi*TIMESTAMP + theta) + cos(theta));
-	f24 = (((TIMESTAMP*velocity)/phi) * sin(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (-cos(phi*TIMESTAMP + theta) + cos(theta)));
+	f22 = (velocity/phi) * (sinf(phi*TIMESTAMP + theta) - sinf(theta));
+	f23 = (1/phi) * (-cosf(phi*TIMESTAMP + theta) + cosf(theta));
+	f24 = (((TIMESTAMP*velocity)/phi) * sinf(TIMESTAMP*phi + theta)) - ((velocity/(phi*phi)) * (-cosf(phi*TIMESTAMP + theta) + cosf(theta)));
 
 	writeF(0,2,f12);
 	writeF(0,3,f13);
@@ -159,22 +167,26 @@ __host__ __device__ void PointCellDevice::computeCovarianceF()
 	writeF(1,3,f23);
 	writeF(1,4,f24);
 }
-__host__ __device__ void PointCellDevice::update(double* newState)
+/*
+ * perfomrs kalman filter update step with given new state
+ */
+__host__ __device__ void PointCellDevice::update(float* newState)
 {
-	double velocity, phi;
-	double xNew = newState[0];
-	double yNew = newState[1];
-	double thetaNew = newState[2];
+	float velocity, phi;
+	float xNew = newState[0];
+	float yNew = newState[1];
+	float thetaNew = newState[2];
 
-	double x = data[5];
-	double y = data[6];
-	double theta = data[7];
-	velocity = sqrt((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
+	float x = data[5];
+	float y = data[6];
+	float theta = data[7];
+	//first compute yawrate and velocity based in new and old position
+	velocity = sqrtf((xNew - x) * (xNew - x) + (yNew - y)*(yNew - y)) / TIMESTAMP;
 	phi = (thetaNew-theta) / TIMESTAMP;
 
 	setVelocity(velocity);
 	setPhi(phi);
-	double tmp = 0;
+	float tmp = 0;
 
 	//tmp = H*P
 	for(int i=0; i<5; i++)
@@ -228,24 +240,6 @@ __host__ __device__ void PointCellDevice::update(double* newState)
 		}
 	}
 
-	//S inverse
-/*	Matrix<double> S(5,5);
-	for(int i=0; i<5;i++)
-	{
-		for(int j=0; j<5;j++)
-		{
-			S.put(i,j,getS(i,j));
-		}
-	}
-	S.invert();
-	for(int i=0; i<5;i++)
-	{
-		for(int j=0; j<5;j++)
-		{
-			writeS(i,j,S.get(i,j));
-		}
-	}*/
-
 	invertS();
 
 	//K = tmp*S_i
@@ -268,14 +262,11 @@ __host__ __device__ void PointCellDevice::update(double* newState)
 		for(int j=0; j<1; j++)
 		{
 			tmp = 0;
-//			for(int k=0; k<5; k++)
-//			{
 			tmp += getK(i,0)*(xNew-getX());
 			tmp += getK(i,1)*(yNew-getY());
 			tmp += getK(i,2)*(thetaNew-getTheta());
 			tmp += getK(i,3)*(velocity-getVelocity());
 			tmp += getK(i,4)*(phi-getPhi());
-	//		}
 			writeTmp(i,j, tmp);
 		}
 	}
@@ -334,11 +325,13 @@ __host__ __device__ void PointCellDevice::update(double* newState)
 	}
 
 }
-
+/*
+ * performs the inversion of S
+ */
 __host__ __device__ void PointCellDevice::invertS()
 {
 	//Concatenate IdentityMatrix to the right of S
-	double toInvert[50];
+	float toInvert[50];
 	for(int i=0; i<5; i++)
 	{
 		for(int j=0; j<5; j++)
@@ -364,9 +357,9 @@ __host__ __device__ void PointCellDevice::invertS()
 
 }
 
-__host__ __device__ void PointCellDevice::reducedRowEcholon(double* toInvert)
+__host__ __device__ void PointCellDevice::reducedRowEcholon(float* toInvert)
 {
-    double const ZERO = static_cast<double>( 0 );
+    float const ZERO = static_cast<float>( 0 );
     int order[5];
     int rows = 5;
     int columns = 10;
@@ -384,7 +377,7 @@ __host__ __device__ void PointCellDevice::reducedRowEcholon(double* toInvert)
 
       // Divide row down so first term is 1.
       unsigned column = getLeadingZeros( row , toInvert);
-      double divisor = toInvert[(row * columns) + column];
+      float divisor = toInvert[(row * columns) + column];
       if ( ZERO != divisor )
       {
         divideRow(toInvert, row, divisor );
@@ -425,7 +418,7 @@ __host__ __device__ void PointCellDevice::reducedRowEcholon(double* toInvert)
     }
     getSubMatrix(toInvert,0, 4, 5, 9, order);
 }
-__host__ __device__ void PointCellDevice::reorder(double* toInvert, int* order)
+__host__ __device__ void PointCellDevice::reorder(float* toInvert, int* order)
 {
     unsigned zeros[5];
     int rows = 5;
@@ -449,14 +442,14 @@ __host__ __device__ void PointCellDevice::reorder(double* toInvert, int* order)
       order[ swapRow ] = hold;
     }
 }
-__host__ __device__ void PointCellDevice::divideRow(double* toInvert, int row, double divisor)
+__host__ __device__ void PointCellDevice::divideRow(float* toInvert, int row, float divisor)
 {
     for ( unsigned column = 0; column < 10; ++column )
     {
       toInvert[ (row * 10) + column] /= divisor;
     }
 }
-__host__ __device__ void PointCellDevice::rowOperation(double* toInvert, int row, int addRow, double scale)
+__host__ __device__ void PointCellDevice::rowOperation(float* toInvert, int row, int addRow, float scale)
 {
 	int columns = 10;
     for ( unsigned column = 0; column < columns; ++column )
@@ -465,9 +458,9 @@ __host__ __device__ void PointCellDevice::rowOperation(double* toInvert, int row
     }
 }
 
-__host__ __device__ unsigned PointCellDevice::getLeadingZeros(unsigned row, double* toInvert) const
+__host__ __device__ unsigned PointCellDevice::getLeadingZeros(unsigned row, float* toInvert) const
 {
-	  double const ZERO = static_cast< double >( 0 );
+	  float const ZERO = static_cast< float >( 0 );
 	  unsigned column = 0;
 	  while ( ZERO == toInvert[ (row * 10) + column] )
 	  {
@@ -476,7 +469,7 @@ __host__ __device__ unsigned PointCellDevice::getLeadingZeros(unsigned row, doub
 	  return column;
 }
 
-__host__ __device__ void PointCellDevice::getSubMatrix(double* toInvert, unsigned startRow,unsigned endRow,unsigned startColumn,unsigned endColumn, int* newOrder)
+__host__ __device__ void PointCellDevice::getSubMatrix(float* toInvert, unsigned startRow,unsigned endRow,unsigned startColumn,unsigned endColumn, int* newOrder)
 {
 	int columns = 10;
     for ( unsigned row = startRow; row <= endRow; ++row )
@@ -502,144 +495,144 @@ __host__ __device__ void PointCellDevice::setID(int id)
 {
 	ID = id;
 }
-__host__ __device__ double PointCellDevice::getX()
+__host__ __device__ float PointCellDevice::getX()
 {
 	return data[0];
 }
-__host__ __device__ double PointCellDevice::getY()
+__host__ __device__ float PointCellDevice::getY()
 {
 	return data[1];
 }
-__host__ __device__ double PointCellDevice::getTheta()
+__host__ __device__ float PointCellDevice::getTheta()
 {
 	return data[2];
 }
-__host__ __device__ double PointCellDevice::getVelocity()
+__host__ __device__ float PointCellDevice::getVelocity()
 {
 	return data[3];
 }
-__host__ __device__ double PointCellDevice::getPhi()
+__host__ __device__ float PointCellDevice::getPhi()
 {
 	return data[4];
 }
 
-__host__ __device__ void PointCellDevice::setX(double x)
+__host__ __device__ void PointCellDevice::setX(float x)
 {
 	data[0] = x;
 }
-__host__ __device__ void PointCellDevice::setY(double y)
+__host__ __device__ void PointCellDevice::setY(float y)
 {
 	data[1] = y;
 }
-__host__ __device__ void PointCellDevice::setTheta(double theta)
+__host__ __device__ void PointCellDevice::setTheta(float theta)
 {
 	data[2] = theta;
 }
-__host__ __device__ void PointCellDevice::setVelocity(double velocity)
+__host__ __device__ void PointCellDevice::setVelocity(float velocity)
 {
 	data[3] = velocity;
 }
-__host__ __device__ void PointCellDevice::setPhi(double phi)
+__host__ __device__ void PointCellDevice::setPhi(float phi)
 {
 	data[4] = phi;
 }
 
-__host__ __device__ void PointCellDevice::writeP(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeP(int row, int col, float value)
 {
 	data[35 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeF(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeF(int row, int col, float value)
 {
 	data[10 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeH(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeH(int row, int col, float value)
 {
 	data[60 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeR(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeR(int row, int col, float value)
 {
 	data[85 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeK(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeK(int row, int col, float value)
 {
 	data[110 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeI(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeI(int row, int col, float value)
 {
 	data[135 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeQ(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeQ(int row, int col, float value)
 {
 	data[160 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeS(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeS(int row, int col, float value)
 {
 	data[185 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeTmp(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeTmp(int row, int col, float value)
 {
 	data[210 + row*5 + col] = value;
 }
 
-__host__ __device__ void PointCellDevice::writeTmp2(int row, int col, double value)
+__host__ __device__ void PointCellDevice::writeTmp2(int row, int col, float value)
 {
 	data[235 + row*5 + col] = value;
 }
 
-__host__ __device__ double PointCellDevice::getP(int row, int col)
+__host__ __device__ float PointCellDevice::getP(int row, int col)
 {
 	return data[35 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getF(int row, int col)
+__host__ __device__ float PointCellDevice::getF(int row, int col)
 {
 	return data[10 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getH(int row, int col)
+__host__ __device__ float PointCellDevice::getH(int row, int col)
 {
 	return data[60 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getR(int row, int col)
+__host__ __device__ float PointCellDevice::getR(int row, int col)
 {
 	return data[85 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getK(int row, int col)
+__host__ __device__ float PointCellDevice::getK(int row, int col)
 {
 	return data[110 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getI(int row, int col)
+__host__ __device__ float PointCellDevice::getI(int row, int col)
 {
 	return data[135 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getQ(int row, int col)
+__host__ __device__ float PointCellDevice::getQ(int row, int col)
 {
 	return data[160 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getS(int row, int col)
+__host__ __device__ float PointCellDevice::getS(int row, int col)
 {
 	return data[185 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getTmp(int row, int col)
+__host__ __device__ float PointCellDevice::getTmp(int row, int col)
 {
 	return data[210 + row*5 + col];
 }
 
-__host__ __device__ double PointCellDevice::getTmp2(int row, int col)
+__host__ __device__ float PointCellDevice::getTmp2(int row, int col)
 {
 	return data[235 + row*5 + col];
 }

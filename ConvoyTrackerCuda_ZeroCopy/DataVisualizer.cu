@@ -8,7 +8,7 @@
 #include "DataVisualizer.cuh"
 
 DataVisualizer::DataVisualizer() {
-	// TODO Auto-generated constructor stub
+	//define 20 differnet colors
 	colors[0] = "#ff0000";
 	colors[1] = "#ff8000";
 	colors[2] = "#ffff00";
@@ -32,7 +32,7 @@ DataVisualizer::DataVisualizer() {
 }
 
 DataVisualizer::~DataVisualizer() {
-	// TODO Auto-generated destructor stub
+
 }
 /*
  * Creates an SVG File (http://www.w3schools.com/svg/svg_inhtml.asp) to visualize the segments as pointcloud
@@ -53,7 +53,7 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(cartesian_segment* segments, 
 		for(int j=0; j<seg.numberOfMeasures; j++)
 		{
 			laserdata_cartesian data = seg.measures[j];
-			//compute coordinates on Canvas, default 0 is on top but should be on the bottom and in the middle
+			//compute coordinates on Canvas, default 0 is on top but should be on the bottom and in the middle for better understanding
 			int xOnCanvas = CANVASSIZE;
 			int yOnCanvas = CANVASSIZE/2;
 
@@ -71,8 +71,6 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(cartesian_segment* segments, 
 			}
 
 			myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"" << color <<"\" stroke-width=\"4\" fill=\"" << color <<"\"/>" << std::endl;
-		//	myfile << "    <circle cx=\""<< yOnCanvas << "\" cy=\"" << xOnCanvas << "\" r=\"1\" stroke=\"blue\" stroke-width=\"4\" fill=\"blue\"/>" << std::endl;
-
 		}
 	  }
 	  myfile << "</svg>" << std::endl;
@@ -80,7 +78,9 @@ void DataVisualizer::visualizeSegmentsAsPointCloud(cartesian_segment* segments, 
 	  myfile << "</html>" << std::endl;
 	  myfile.close();
 }
-
+/*
+ * draws the extracted vehicles as a set of lines defined with the 3 relevant points
+ */
 void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserdata_cartesian> > segments, std::string number)
 {
 	std::ofstream myfile;
@@ -120,7 +120,9 @@ void DataVisualizer::visualizeVehiclesAsRectangle(std::vector<std::vector<laserd
 	myfile << "</html>" << std::endl;
 	myfile.close();
 }
-
+/*
+ * draw all convoys as a polyline defined with the position vector of each convoy
+ */
 void DataVisualizer::visualizeConvoys(std::vector<EMLPos> EML, Convoy* convoys, int startIndexConvoys, int endIndexConvoys)
 {
 	int xOnCanvas = CANVASSIZE;
@@ -179,7 +181,9 @@ void DataVisualizer::visualizeConvoys(std::vector<EMLPos> EML, Convoy* convoys, 
 	myfile.close();
 }
 
-
+/*
+ * visualize all stored histories as lines defined with the position vectors of each history
+ */
 void DataVisualizer::visualizeHistory(std::vector<EMLPos> EML, History* history, int startIndex, int endIndex)
 {
 	int xOnCanvas = CANVASSIZE;

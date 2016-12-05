@@ -18,7 +18,6 @@
 #include <cuda.h>
 #include <stdio.h>
 #include <map>
-#include "PointCell.cuh"
 #include "PointCellDevice.cuh"
 
 #define CANVASSIZE 2000

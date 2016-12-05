@@ -48,18 +48,18 @@ public:
 	int* d_historyMatchSelf_ptr;
 	Convoy* d_convoys_ptr;
 
-	double* xSubInterval;
-	double* d_subIntvl_ptr;
+	float* xSubInterval;
+	float* d_subIntvl_ptr;
 	int* h_IDincluded;
 	int* d_IDincluded_ptr;
 	bool* h_duplicate;
 	bool* d_duplicate_ptr;
-	double* h_updateData;
-	double* d_updataData_ptr;
+	float* h_updateData;
+	float* d_updataData_ptr;
 	int* h_intvlIndex;
 	int* d_intvlIndex_ptr;
-	double* h_distance;
-	double* d_distance_ptr;
+	float* h_distance;
+	float* d_distance_ptr;
 
 	History* history;
 	int startIndexHistory;
@@ -78,11 +78,6 @@ public:
 
 	void readEMLData(std::string number);
 	void associateAndUpdate(int vehicleCount, std::vector<PointCellDevice*> trackedVehicles);
-	void findConvoy(PointCellDevice vehicle);
-	void shiftConvoyHistory(double x);
-	void rotateConvoyHistory(double theta, double y);
-	void shiftStructure(double xMotion);
-	void rotateStructure(double angle, double yMotion);
 	void visualizeConvoys();
 	void visualizeHistory();
 
@@ -122,11 +117,7 @@ private:
 
 	std::vector<EMLPos> EML;
 
-	bool checkConvoyForDuplicate(double x, Convoy c);
-	bool checkHistoryForDuplicate(double x, int historyIndex);
-	int findIDinConvoy(Convoy c, int id);
-	int findHistoryWithID(int id);
-	bool checkConvoyForY(double y, double x, Convoy c);
+	bool checkConvoyForY(float y, float x, Convoy c);
 
 };
 
